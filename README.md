@@ -23,6 +23,7 @@ nmscc涉及矩阵代数，GPU/CPU并行计算，序列化，单元测试等。
   1. Visual Studio 2017
 
 - Linux
+  1. LLVM-4.0
   1. GCC-6.x
   1. GCC-7.x
 
@@ -57,7 +58,7 @@ git clone --recursive https://github.com/lumpyzhu/nmscc.git
   如果有多个版本的编译器，请先设置CXX环境变量
 
 ``` bash
-  export CXX=g++-7    # select g++-7
+  export CXX=clang++  # select clang
   cd nms
   make -j9
   make test           # run unittest
@@ -70,6 +71,7 @@ git clone --recursive https://github.com/lumpyzhu/nmscc.git
 ## Conduct
 
 - [行为准则](CODE_OF_CONDUCT.md)
+- [设计理念](docs/design.md)
 
 ## Contributing
 
