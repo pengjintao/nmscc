@@ -71,7 +71,7 @@ git clone --recursive https://github.com/lumpyzhu/nmscc.git
 ## Conduct
 
 - [行为准则](CODE_OF_CONDUCT.md)
-- [设计理念](docs/design.md)
+- [设计理念](https://github.com/lumpyzhu/nmscc.docs/blob/master/design.md)
 
 ## Contributing
 
