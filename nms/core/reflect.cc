@@ -10,7 +10,7 @@ class TestClass
 { };
 
 nms_test(property) {
-    io::log::info("TestClass.name = {}", typeof<TestClass>().name());
+    io::log::info("TestClass.name = {}", $typeid<TestClass>.name);
 }
 
 #pragma endregion

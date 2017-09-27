@@ -61,37 +61,37 @@ namespace nms::thread
 {
 
 NMS_API void Thread::start(thrd_ret_t(*pfun)(void*), void* pobj) {
-    if (impl_ != thrd_t(0)) {
+    if (_fobj != thrd_t(0)) {
         return;
     }
-    auto ret = thrd_create(&impl_, pfun, pobj);
+    auto ret = thrd_create(&_fobj, pfun, pobj);
 
-    if (impl_ == thrd_t(0) && ret == 0) {
+    if (_fobj == thrd_t(0) && ret == 0) {
         io::log::error("nms.thread.Thread.start : start thread failed.");
     } else {
-        io::log::debug("nms.thread.Thread.start : {}", impl_);
+        io::log::debug("nms.thread.Thread.start : {}", _fobj);
     }
 }
 
 NMS_API int Thread::detach() {
-    if (impl_ == thrd_t(0) ) {
+    if (_fobj == thrd_t(0) ) {
         return 0;
     }
 
-    io::log::debug("nms.thread.Thread.detach: {}", impl_);
-    auto ret = thrd_detach(impl_);
-    impl_ = thrd_t(0);
+    io::log::debug("nms.thread.Thread.detach: {}", _fobj);
+    auto ret = thrd_detach(_fobj);
+    _fobj = thrd_t(0);
     return ret;
 }
 
 NMS_API int Thread::join() {
-    if (impl_ == thrd_t(0) ) {
+    if (_fobj == thrd_t(0) ) {
         return 0;
     }
 
-    io::log::debug("nms.thread.Thread.join  : {}", impl_);
-    auto ret = thrd_join(impl_, nullptr);
-    impl_ = thrd_t(0);
+    io::log::debug("nms.thread.Thread.join  : {}", _fobj);
+    auto ret = thrd_join(_fobj, nullptr);
+    _fobj = thrd_t(0);
     return ret;
 }
 

@@ -19,11 +19,11 @@
   <!--property: config-->
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <!--import-->
   <ImportGroup Label="PropertySheets">
@@ -36,7 +36,6 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PreprocessorDefinitions>NMS_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>nms/test.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>nms/test.h</ForcedIncludeFiles>
     </ClCompile>
@@ -44,7 +43,6 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>NMS_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>nms/test.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>nms/test.h</ForcedIncludeFiles>
     </ClCompile>
@@ -75,6 +73,7 @@
     <ClInclude Include="nms\core\base.h" />
     <ClInclude Include="nms\core\cpp.h" />
     <ClInclude Include="nms\core\cpp.msvc.h" />
+    <ClInclude Include="nms\core\enum.h" />
     <ClInclude Include="nms\core\exception.h" />
     <ClInclude Include="nms\core\format.h" />
     <ClInclude Include="nms\core\list.h" />
@@ -83,13 +82,13 @@
     <ClInclude Include="nms\core\string.h" />
     <ClInclude Include="nms\core\time.h" />
     <ClInclude Include="nms\core\trait.h" />
-    <ClInclude Include="nms\core\type.h" />
+    <ClInclude Include="nms\core\reflect.h" />
     <ClInclude Include="nms\core\vec.h" />
     <ClInclude Include="nms\core\view.h" />
     <ClCompile Include="nms\core\cpp.cc" />
     <ClCompile Include="nms\core\list.cc" />
     <ClCompile Include="nms\core\parse.cc" />
-    <ClCompile Include="nms\core\type.cc" />
+    <ClCompile Include="nms\core\reflect.cc" />
     <ClCompile Include="nms\core\vec.cc" />
     <ClCompile Include="nms\core\view.cc" />
     <ClCompile Include="nms\core\exception.cc" />
@@ -165,7 +164,7 @@
     <ClCompile Include="nms\util\system.cc" />
     <!--test-->
     <ClCompile Include="nms\test.h">
-      <PrecompiledHeader>Create</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClInclude Include="nms\test\assert.h" />
     <ClInclude Include="nms\test\test.h" />

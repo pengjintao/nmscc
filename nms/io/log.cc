@@ -23,10 +23,10 @@ NMS_API TxtFile& gLogFile() {
 }
 
 NMS_API void setLogPath(const Path& path) {
-    gLogFile().open(path, File::Write);
+    gLogFile().reopen(path, FileMode::Read);
 }
 
-static StrView getConsoleColor(Level type) {
+static str getConsoleColor(Level type) {
     switch (type) {
         case Level::None:
             return console::$rst;
@@ -53,7 +53,7 @@ static StrView getConsoleColor(Level type) {
     }
 }
 
-NMS_API IString& _gStrBuff() {
+NMS_API IString& _tls_strbuf() {
     static thread_local U8String<128*1024> str;   // 128KB
     return str;
 }
@@ -67,20 +67,20 @@ NMS_API void _message(Level level, IString& msg) {
 
     // current process time
     const auto time = clock();
-    const auto name = mkEnum(level).name();
+    const auto name = Enum<Level>{ level }.name;
 
     // 1. terminal
     {
         const auto color    =  getConsoleColor(level);
 
         char head[64];
-        const auto head_len = snprintf(head, sizeof(head), "%s[%s] %6.3f%s ", color.data(), name.data(), time, console::$rst);
+        const auto head_len = snprintf(head, sizeof(head), "%s[%s] %6.3f%s ", color.data, name.data, time, console::$rst);
 
         if (head_len > 0 && u32(head_len) <= sizeof(head) ) {
             const auto offset   = u32(sizeof(head)) - u32(head_len);
-            mcpy(msg.data()+offset, head, head_len);
+            mcpy(msg.data+offset, head, head_len);
 
-            StrView out{msg.data()+offset, msg.count()-offset};
+            str out{msg.data+offset, msg.count-offset};
             console::write(out);
         }
 
@@ -95,12 +95,12 @@ NMS_API void _message(Level level, IString& msg) {
 
     if (log_file) {
         char head[64];
-        const auto head_len = snprintf(head, sizeof(head), "[%s] %6.3f ", name.data(), time);
+        const auto head_len = snprintf(head, sizeof(head), "[%s] %6.3f ", name.data, time);
 
         if (head_len > 0) {
             const auto offset   = u32(sizeof(head)) - u32(head_len);
-            mcpy(msg.data()+offset, head, head_len);
-            StrView out{msg.data()+offset, msg.count()-offset};
+            mcpy(msg.data+offset, head, head_len);
+            str out{msg.data+offset, msg.count-offset};
             log_file.write(out);
         }
     }

@@ -11,7 +11,7 @@ public:
     struct Frame
     {
         void* ptr;
-        NMS_API void format(IString& buf) const;
+        NMS_API void sformat(IString& buf) const;
     };
 
     /*! capture current stackinfo */
@@ -36,7 +36,7 @@ public:
         return Frame{ stacks_[idx+3] };
     }
 
-    NMS_API void format(IString& buf) const;
+    NMS_API void sformat(IString& buf) const;
 
 protected:
     void*   stacks_[64];

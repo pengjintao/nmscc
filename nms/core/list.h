@@ -63,14 +63,22 @@ public:
     /*! reserve storage */
     void reserve(Tsize newcnt) {
         if (newcnt > base::capacity_) {
-            NMS_THROW(out_of_range(0u, base::capacity_, newcnt));
+            NMS_THROW(Eoutofrange<Tsize>{0u, base::capacity_, newcnt});
         }
     }
 
-    /*! resize element count */
+    /*! resize element count(not check) */
     void _resize(Tsize newcnt) {
         static_assert($is<$pod, Tdata>, "nms.List.resize: Tdata shold be POD type");
         base::size_ = newcnt;
+    }
+
+    /*! resize element count */
+    void resize(Tsize newcnt) {
+        if (newcnt > base::capacity_) {
+            NMS_THROW(Eoutofrange<Tsize>{0u, base::capacity_, Tsize(newcnt) });
+        }
+        this->_resize(newcnt);
     }
 
     /*! clear all elements */
@@ -110,13 +118,13 @@ public:
 #pragma region operator+=
     template<class U, class = $when_is<Tdata, U> >
     IList& operator+=(const View<const U>& rhs) {
-        appends(rhs.data(), rhs.count());
+        appends(rhs.data, rhs.count);
         return *this;
     }
 
     template<class U, class = $when_is<Tdata, U> >
     IList& operator+=(const View<U>& rhs) {
-        appends(rhs.data(), rhs.count());
+        appends(rhs.data, rhs.count);
         return *this;
     }
 
@@ -139,7 +147,7 @@ public:
     IList& appends(Tsize cnt, U&& ...u) {
     #if NMS_LIST_DEBUG
         if (base::size_ + cnt > base::capacity_) {
-            NMS_THROW(out_of_range(0u, base::capacity_, base::size_ + cnt));
+            NMS_THROW(Eoutofrange<u32>{0u, base::capacity_, base::size_ + cnt});
         }
     #endif
         for (Tsize i = 0; i < cnt; ++i) {
@@ -153,7 +161,7 @@ public:
     IList& appends(const U dat[], Tsize cnt) {
     #if NMS_LIST_DEBUG
         if (base::size_ + cnt > base::capacity_) {
-            NMS_THROW(out_of_range(0u, base::capacity_, base::size_ + cnt));
+            NMS_THROW(Eoutofrange<u32>{0u, base::capacity_, base::size_ + cnt});
         }
     #endif
         for (Tsize i = 0; i < cnt; ++i) {
@@ -165,7 +173,7 @@ public:
     /*! append elements to the end */
     template<class U>
     IList& appends(const View<U>& view) {
-        appends(view.data(), view.count());
+        appends(view.data, view.count);
         return *this;
     }
 
@@ -251,12 +259,12 @@ public:
 
     template<class U, class=$when_as<Tdata, const U&> >
     List(const View<U>& view) : List{} {
-        base::appends(view.data(), view.count());
+        base::appends(view.data, view.count);
     }
 
     template<class U, class=$when_as<Tdata, const U&> >
     List(const View<const U>& view) : List{} {
-        base::appends(view.data(), view.count());
+        base::appends(view.data, view.count);
     }
 
     template<class U, u32 SN, class=$when_as<Tdata, const U&> >
@@ -272,7 +280,7 @@ public:
     }
 
     List(const List& rhs): List{} {
-        base::appends(rhs.data(), rhs.count());
+        base::appends(rhs.data, rhs.count);
     }
 
     List dup() const {
@@ -418,8 +426,8 @@ public:
         rhs.View<Tdata>::operator=(View<Tdata>{});
     }
 
-    List(const List& rhs): List({ rhs.count() }) {
-        base::appends(rhs.data(), rhs.count());
+    List(const List& rhs): List({ rhs.count }) {
+        base::appends(rhs.data, rhs.count);
     }
 
     List dup() const {

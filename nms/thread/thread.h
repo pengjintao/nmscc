@@ -53,7 +53,7 @@ public:
     NMS_API static int  sleep(double duration);
 
 protected:
-    thrd_t  impl_   = thrd_t(0);
+    thrd_t  _fobj   = thrd_t(0);
     u64     buff_[$buff_size/sizeof(u64)];
 
     NMS_API void start(thrd_ret_t(*pfun)(void*), void* pobj);

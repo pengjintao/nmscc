@@ -15,10 +15,10 @@ NMS_API bool ITask::exec() {
         io::log::info("<< task[{}] success.", name_);
         return true;
     }
-    catch (const IException& e) {
+    catch (const Iexception& e) {
         auto& type_id = typeid(e);
         io::log::error("throw {}: `{}`", type_id, e);
-        auto& stack_info = IException::get_stackinfo();
+        auto& stack_info = get_exception_stackinfo();
         io::console::writeln("{}", stack_info);
 
         io::log::error("<< task[{}] failed.", name_);

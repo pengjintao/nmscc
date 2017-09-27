@@ -1,6 +1,6 @@
 #pragma once
 
-#include <nms/core/type.h>
+#include <nms/core/base.h>
 
 namespace nms
 {
@@ -28,9 +28,9 @@ public:
         void*   address_;
     };
 
-    NMS_API Library(const StrView&  path);
+    NMS_API Library(const str&  path);
     NMS_API ~Library();
-    NMS_API Function operator[](StrView name) const;
+    NMS_API Function operator[](str name) const;
 
     operator bool() const {
         return object_ != nullptr;

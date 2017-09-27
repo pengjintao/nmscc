@@ -21,7 +21,7 @@ public:
      * constructor
      * @param source: cuda source (*.cu)
      */
-    Program(StrView src): Program() {
+    Program(str src): Program() {
         src_.appends(src);
     }
 

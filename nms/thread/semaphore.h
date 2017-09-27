@@ -21,16 +21,16 @@ public:
     }
 
     Semaphore(Semaphore&& rhs) noexcept
-        : impl_(rhs.impl_)
+        : _fobj(rhs._fobj)
     {
-        rhs.impl_ = nullptr;
+        rhs._fobj = nullptr;
     }
 
     Semaphore& operator=(Semaphore&& rhs) {
         if (&rhs != this) {
             close();
-            impl_ = rhs.impl_;
-            rhs.impl_ = nullptr;
+            _fobj = rhs._fobj;
+            rhs._fobj = nullptr;
         }
         return *this;
     }
@@ -47,7 +47,7 @@ public:
     NMS_API Semaphore& operator--();
 
 private:
-    sem_t* impl_ = nullptr;
+    sem_t* _fobj = nullptr;
 };
 
 }

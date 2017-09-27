@@ -11,9 +11,8 @@ class Path;
 namespace nms::math
 {
 
-template<class T, u32 N=1>
-class Array
-    : public View<T, N>
+template<class T, u32 N>
+class Array: public View<T, N>
 {
 public:
     using base  = View<T, N>;
@@ -26,22 +25,22 @@ public:
 
 #pragma region constructors
     /* default constructor */
-    constexpr Array()
-        : base{}
-    {}
+    constexpr Array() = default;
 
     /* constructor */
-    explicit Array(const Tsize(&dims)[$rank])
-        : base{ nullptr, dims }
-    {
-        const auto cnt = this->count();
+    explicit Array(const Tdims& dims) : base{ nullptr, dims } {
+        const auto cnt = base::count;
         if (cnt != 0) {
-
             // SIMD require memory aligned (128*8=1024)
             // SSE(64bit~128bit), AVX(256bit~512bit)
             this->data_ = anew<T>(cnt, 256);
         }
     }
+
+    /* constructor */
+    explicit Array(const Tsize(&dims)[$rank])
+        : Array{ Tdims::from_array(dims) }
+    {}
 
     /* destructor */
     ~Array() {
@@ -54,46 +53,38 @@ public:
 
     /* move constructor */
     Array(Array&& rhs) noexcept
-        : base{ static_cast<base&&>(rhs) }
+        : base{ rhs }
     {
-        rhs.base::operator=(base{});
-    }
-
-    /* move assign operator */
-    Array& operator=(Array&& rhs) noexcept {
-        if (this != &rhs) {
-            this->clear();
-            this->base::operator=(rhs);
-            rhs.base::operator=(base{});
-        }
-        return *this;
+        rhs.data_ = nullptr;
     }
 
     /* copy assign operator is disabled */
-    Array& operator=(const Array& rhs) = delete;
+    Array& operator=(const Array&) = delete;
+    Array& operator=(Array&&     ) = delete;
 
     /* get copies */
     Array dup() const {
-        const auto dims = this->size();
-        Array tmp(dims);
+        const auto data_dims = this->dims;
+        Array tmp(data_dims);
 
-        const auto cnt = this->count();
-        const auto src = this->data();
-        const auto dst = tmp.data();
-        if (cnt != 0) {
-            mcpy(dst, src, cnt);
+        const auto data_cnt = this->count;
+        const auto src_data = this->data;
+        const auto dst_data = tmp.data;
+        if (data_cnt != 0) {
+            mcpy(dst_data, src_data, data_cnt);
         }
         return tmp;
     }
 #pragma endregion
 
 #pragma region methods
-    Array& resize(const Tsize(&newlen)[$rank]) {
-        const auto oldlen = this->size();
+    Array& resize(const Tsize(&dims)[$rank]) {
+        const auto olddims = this->dims;
+        const auto newdims = Tdims::from_array(dims);
 
-        if (oldlen != Tdims{ newlen }) {
-            Array tmp{ newlen };
-            this->operator=(static_cast<Array&&>(tmp));
+        if (olddims != newdims) {
+            this->~Array();
+            new(this)Array({ newdims });
         }
         return *this;
     }
@@ -135,41 +126,40 @@ protected:
 private:
     template<class File>
     void saveFile(File& file) const {
-        const typename base::Tinfo info = this->info();
-        const typename base::Tdims size = this->size();
+        const typename base::Tinfo data_info = this->$info;
+        const typename base::Tdims data_dims = this->dims;
 
-        file.write(&info, 1);
-        file.write(&size, 1);
-        file.write(this->data(), this->count());
+        file.write(&data_info, 1);
+        file.write(&data_dims, 1);
+        file.write(this->data, this->count);
     }
 
     template<class File>
     static auto loadFile(const File& file) {
-        typename base::Tinfo info_value;
-        typename base::Tdims size;
-        static const auto info_expect = base::info();
+        typename base::Tinfo data_info;
+        typename base::Tdims data_dims;
 
-        file.read(&info_value, 1);
-        if (info_value != info_expect) {
-            NMS_THROW(unexpect(info_expect, info_value));
+        file.read(&data_info, 1);
+        if (data_info != base::$info) {
+            NMS_THROW(Eunexpect<Tinfo>{base::$info, data_info});
         }
 
-        file.read(&size, 1);
+        file.read(&data_dims, 1);
 
-        Array tmp(size);
-        file.read(tmp.data(), tmp.count());
+        Array tmp(data_dims);
+        file.read(tmp.data, tmp.count);
         return tmp;
     }
 
     template<class File, class Path>
     void savePath(const Path& path) const {
-        File file(path, File::Write);
+        auto file = File::open_for_write(path);
         saveFile(file);
     }
 
     template<class File, class Path>
     static auto loadPath(const Path& path) {
-        File file(path, File::Read);
+        auto file = File::open_for_read(path);
         return Array::loadFile(file);
     }
 };

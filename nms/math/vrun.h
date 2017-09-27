@@ -22,8 +22,8 @@ protected:
 
     template<class Tfunc, class Tret, class Targ>
     void _foreach(Tu32<1>, Tfunc, Tret& ret, const Targ& arg) {
-        const auto size = ret.size();
-        const auto s0   = i32(size[0]);
+        const auto dims = ret.dims;
+        const auto s0   = i32(dims[0]);
 
         for (i32 i0 = 0; i0 < s0; ++i0) {
             Tfunc::run(ret(i0), arg(i0));
@@ -32,10 +32,10 @@ protected:
 
     template<class Tfunc, class Tret, class Targ>
     void _foreach(Tu32<2>, Tfunc, Tret& ret, const Targ& arg) {
-        const auto size = ret.size();
+        const auto dims = ret.dims;
 
-        for (u32 i1 = 0; i1 < size[1]; ++i1) {
-            for (u32 i0 = 0; i0 < size[0]; ++i0) {
+        for (u32 i1 = 0; i1 < dims[1]; ++i1) {
+            for (u32 i0 = 0; i0 < dims[0]; ++i0) {
                 Tfunc::run(ret(i0, i1), arg(i0, i1));
             }
         }
@@ -43,11 +43,11 @@ protected:
 
     template<class Tfunc, class Tret, class Targ>
     void _foreach(Tu32<3>, Tfunc, Tret& ret, const Targ& arg) {
-        const auto size = ret.size();
+        const auto dims = ret.dims;
 
-        for (u32 i2 = 0; i2 < size[2]; ++i2) {
-            for (u32 i1 = 0; i1 < size[1]; ++i1) {
-                for (u32 i0 = 0; i0 < size[0]; ++i0) {
+        for (u32 i2 = 0; i2 < dims[2]; ++i2) {
+            for (u32 i1 = 0; i1 < dims[1]; ++i1) {
+                for (u32 i0 = 0; i0 < dims[0]; ++i0) {
                     Tfunc::run(ret(i0, i1, i2), arg(i0, i1, i2));
                 }
             }
@@ -56,12 +56,12 @@ protected:
 
     template<class Tfunc, class Tret, class Targ>
     void _foreach(Tu32<4>, Tfunc, Tret& ret, const Targ& arg) {
-        const auto size = ret.size();
+        const auto dims = ret.dims;
 
-        for (u32 i3 = 0; i3 < size[3]; ++i3) {
-            for (u32 i2 = 0; i2 < size[2]; ++i2) {
-                for (u32 i1 = 0; i1 < size[1]; ++i1) {
-                    for (u32 i0 = 0; i0 < size[0]; ++i0) {
+        for (u32 i3 = 0; i3 < dims[3]; ++i3) {
+            for (u32 i2 = 0; i2 < dims[2]; ++i2) {
+                for (u32 i1 = 0; i1 < dims[1]; ++i1) {
+                    for (u32 i0 = 0; i0 < dims[0]; ++i0) {
                         Tfunc::run(ret(i0, i1, i2, i3), arg(i0, i1, i2, i3));
                     }
                 }
@@ -105,7 +105,7 @@ bool check_size(const T& t, const U& u, const R& ...r) {
     static_assert(T::$rank == U::$rank || U::$rank == 0, "nms.math._check_size: $rank not match");
 
     for (u32 i = 0; i < T::$rank; ++i) {
-        if (u.size(i) != 0 && u.size(i) > t.size(i)) {
+        if (u.dims[i] != 0 && u.dims[i] > t.dims[i]) {
             return false;
         }
     }
@@ -129,7 +129,7 @@ bool foreach(Tfunc func, Tret& ret, const Targs& ...args) {
 #define NMS_IVIEW_FOREACH(op, type)                     \
     template<class T, class = typename T::Tview>        \
     constexpr auto operator op(const T& t) noexcept {   \
-            return math::mkParallel<type>(t);           \
+            return math::make_parallel<type>(t);           \
     }
 NMS_IVIEW_FOREACH(+, Pos)
 NMS_IVIEW_FOREACH(-, Neg)
@@ -138,7 +138,7 @@ NMS_IVIEW_FOREACH(-, Neg)
 #define NMS_IVIEW_FOREACH(op, type)                                     \
     template<class X, class Y, class = decltype(view_test_xy<X, Y>())>  \
     constexpr auto operator op(const X& x, const Y& y) noexcept {       \
-        return math::mkParallel<type>(x, y);                            \
+        return math::make_parallel<type>(x, y);                            \
     }
 
 NMS_IVIEW_FOREACH(+ , Add)
@@ -174,9 +174,9 @@ Y& operator>>=(const X& x, Y& y) {
 template<class Y, class F, class ...T, class=$when_is<$number,Y> >
 Y& operator<<=(Y& y, const Reduce<F, T...>& x) {
 #ifndef NMS_CC_INTELLISENSE
-    Scalar<Y> sy(y);
-    foreach(Ass2{}, sy, x);
-    y = sy();
+    auto vy = Scalar<Y>{ y };
+    foreach(Ass2{}, vy, x);
+    y = vy();
 #endif
     return y;
 }
@@ -194,10 +194,10 @@ NMS_IVIEW_FOREACH(*=, Mul2)
 NMS_IVIEW_FOREACH(/=, Div2)
 #undef NMS_IVIEW_FOREACH
 
-#define NMS_IVIEW_FOREACH(func, type)       \
-template<class T>                           \
-constexpr auto func(const T& t) noexcept {  \
-    return math::mkParallel<type>(t);       \
+#define NMS_IVIEW_FOREACH(func, type)           \
+template<class T>                               \
+constexpr auto func(const T& t) noexcept {      \
+    return math::make_parallel<type>(t);        \
 }
 NMS_IVIEW_FOREACH(vabs,    Abs)
 NMS_IVIEW_FOREACH(vsqrt,   Sqrt)
@@ -218,7 +218,7 @@ NMS_IVIEW_FOREACH(vatan,   Atan)
 #define NMS_IVIEW_REDUCE(func, type)        \
 template<class T>                           \
 constexpr auto func(const T& t) noexcept {  \
-    return math::mkReduce<type>(t);         \
+    return math::make_reduce<type>(t);         \
 }
 NMS_IVIEW_REDUCE(vsum,      Add)
 NMS_IVIEW_REDUCE(vmax,      Max)

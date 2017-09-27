@@ -59,9 +59,6 @@
     <ClInclude Include="nms\core\time.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="nms\core\type.h">
-      <Filter>core</Filter>
-    </ClInclude>
     <ClInclude Include="nms\core\view.h">
       <Filter>core</Filter>
     </ClInclude>
@@ -163,6 +160,12 @@
     </ClInclude>
     <ClInclude Include="nms\serialization\dom.h">
       <Filter>serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="nms\core\enum.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="nms\core\reflect.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -288,9 +291,6 @@
     <ClCompile Include="nms\core\parse.cc">
       <Filter>core</Filter>
     </ClCompile>
-    <ClCompile Include="nms\core\type.cc">
-      <Filter>core</Filter>
-    </ClCompile>
     <ClCompile Include="nms\math\fft.cc">
       <Filter>math</Filter>
     </ClCompile>
@@ -318,6 +318,9 @@
     </ClCompile>
     <ClCompile Include="nms\serialization\dom.cc">
       <Filter>serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="nms\core\reflect.cc">
+      <Filter>core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -58,36 +58,36 @@ static const char $bg_wht[] = "\033[47m";
 }
 
 /*! console string buffer */
-NMS_API IString& _gStrBuff();
+NMS_API IString& _tls_strbuf();
 
-NMS_API void writes(const StrView texts[], u32 n);
+NMS_API void writes(const str texts[], u32 n);
 
-inline void  write(const StrView& text) {
+inline void  write(const str& text) {
     writes(&text, 1);
 }
 
 inline void writeln() {
-    static StrView texts[] = { "\n" };
+    static str texts[] = { "\n" };
     writes(texts, 1);
 }
 
-inline void  writeln(const StrView& text) {
-    StrView texts[] = { text, "\n" };
+inline void  writeln(const str& text) {
+    str texts[] = { text, "\n" };
     writes(texts, 2);
 }
 
 template<class T, class ...U>
-void write(const StrView& fmt, const T& t, const U& ...u) {
-    auto& buf = _gStrBuff();
+void write(const str& fmt, const T& t, const U& ...u) {
+    auto& buf = _tls_strbuf();
     buf._resize(0);
     sformat(buf, fmt, t, u...);
     write(buf);
 }
 
 template<class T, class ...U>
-void writeln(const StrView& fmt, const T& t, const U& ...u) {
-    auto& buf = _gStrBuff();
-    buf._resize(0);
+void writeln(const str& fmt, const T& t, const U& ...u) {
+    auto& buf = _tls_strbuf();
+    buf._resize(0u);
     sformat(buf, fmt, t, u...);
     buf += '\n';
     write(buf);
@@ -98,8 +98,8 @@ NMS_API void show_cursor(bool value = true);
 NMS_API void hide_cursor(bool value = true);
 NMS_API void goto_line(i32 line);
 
-NMS_API void progress_bar(f64 percent, const View<const StrView>& digits, const View<const StrView>& circles, const StrView& color);
-NMS_API void progress_bar(f64 percent, const StrView& color={});
+NMS_API void progress_bar(f64 percent, const View<const str>& digits, const View<const str>& circles, const str& color);
+NMS_API void progress_bar(f64 percent, const str& color={});
 
 
 }

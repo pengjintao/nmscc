@@ -20,7 +20,7 @@ public:
     /* cuda: signin cuda kernel */
     template<class Tfunc, class Tret, class Targ>
     static u32 _signin() {
-        static const auto fid = _signin_impl(typeof<Tfunc>().name(), typeof<Tret>().name(), typeof<Targ>().name());
+        static const auto fid = _signin_impl($typeid<Tfunc>.name, $typeid<Tret>.name, $typeid<Targ>.name);
         return fid;
     }
 
@@ -32,9 +32,9 @@ private:
     /* foreach: redirect to cuda::mcpy */
     template<class T, u32 N>
     static void _foreach(Ass2 /*func*/, const nms::View<T, N>& dst, const nms::View<T, N>& src, Tver<1>) {
-        const auto dst_ptr = const_cast<T*>(dst.data());
-        const auto src_ptr = src.data();
-        const auto cpy_len = dst.count();
+        const auto dst_ptr = const_cast<T*>(dst.data);
+        const auto src_ptr = src.data;
+        const auto cpy_len = dst.count;
         cuda::mcpy(dst_ptr, src_ptr, cpy_len);
     }
 
@@ -45,15 +45,15 @@ private:
         static const auto kid  = _get_kernel(fid);
         static const auto&mod  = sModule();
 
-        const  auto dims  = ret.size();
-        mod.invoke(kid, dims.$count, dims.data, ret, arg);
+        const  auto dims  = ret.dims;
+        mod.invoke(kid, dims.$size, dims.data, ret, arg);
     }
 
     /* get kernel */
     NMS_API static Module::fun_t _get_kernel(u32 fid);
 
     /* signin: impl */
-    NMS_API static u32 _signin_impl(StrView func, StrView ret_type, StrView arg_type);
+    NMS_API static u32 _signin_impl(str func, str ret_type, str arg_type);
 };
 
 inline cuda::Vrun operator||(const cuda::Vrun&, const cuda::Vrun&) {

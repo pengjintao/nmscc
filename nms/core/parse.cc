@@ -1,195 +1,257 @@
 #include <nms/test.h>
+#include <nms/math/base.h>
 
 namespace nms
 {
 
-template<class Tnum>
-static int _parse_number(StrView str, StrView fmt, Tnum& num) {
-    auto ptr = str.data();
-    auto cnt = str.count();
-    auto pos = 0u;
+#pragma region parse: number
 
-    // [c] ?
-    if (fmt.count() > 0 && fmt[0u] == 'c') {
-        num = Tnum(ptr[pos++]);
-        return int(pos);
+// fmt:
+//    {[cnbBoxX]?:[0-9]*}
+template<class T>
+static bool _parse_int(str& text, const str& fmt, T& val) {
+
+    // .....([+-]?)([0-9]*)....
+    //      ^              ^
+    //      |              |
+    //   pos_beg           |
+    //                 pos_end
+    auto str_ptr = text.data;
+    auto str_len = text.count;
+    auto pos_beg = 0u;
+
+    //1. ignore space
+    while (pos_beg < str_len && isblank(str_ptr[pos_beg])) {
+        ++pos_beg;
+    }
+    if (pos_beg == str_len) {
+        return false;
     }
 
-    Tnum val = 0;
+    auto pos_end = pos_beg;
 
-    // ignore space
-    while (pos < cnt && isblank(ptr[pos])) {
-        pos++;
-    }
-    if (pos == cnt) {
-        return 0;
-    }
-
-    // [+-]?
-    const auto sign = ptr[pos];
+    //2. parse sign
+    const auto sign = str_ptr[pos_end];
     switch (sign) {
-        case '+':
-        case '-':
-            ++pos;
-            break;
-        default:
-            break;
+    case '-':
+        ++pos_end;
+        if ($is<$uint, T>) {
+            return false;
+        }
+    case '+':
+        ++pos_end;
+        break;
+    default:
+        break;
     }
 
-    if ($is<$uint, Tnum> && sign == '-') {
-        goto END;
-    }
+    //3. parse body
+    auto abs_val = T(0);
+    if (fmt.count > 0) {
+        const auto type = fmt[0];
+        if (type == 'n' || type == 'd') {
+            goto RADIX_10;
+        }
+        else if (type == 'b' || type == 'B') {   // 2
+            while (pos_end < str_len) {
+                const auto c = str_ptr[pos_end];
 
-    if ($is<$int, Tnum> && fmt.count() > 0) {
-        // oct
-        if (fmt[0] == 'o' || fmt[0] == 'O') {
-            constexpr static const Tnum radix = 8;
-            while (pos < cnt) {
-                auto c = ptr[pos++];
-                if (c >= '0' && c <= '7') {
-                    val *= radix;
-                    val += Tnum(c - '0');
+                if (c == '0') {
+                    abs_val *= 2;
+                }
+                else if (c == '1') {
+                    abs_val *= 2;
+                    abs_val += 1;
                 }
                 else {
                     break;
                 }
             }
-            goto END;
         }
+        else if (type == 'o' || type == 'O') {   // 8
+            while (pos_end < str_len) {
+                const auto c = str_ptr[pos_end];
 
-        // hex
-        else if (fmt[0] == 'x' || fmt[0] == 'X') {
-            constexpr static const Tnum radix = 16;
-            while (pos < cnt) {
-                auto c = ptr[pos++];
+                if (c >= '0' && c <= '7') {
+                    abs_val *= 8;
+                    abs_val += T(c - '0');
+                }
+                else {
+                    break;
+                }
+            }
+        }
+        else if (type == 'x' || type == 'X') {   // 16
+            while (pos_end < str_len) {
+                const auto c = str_ptr[pos_end];
+
                 if (c >= '0' && c <= '9') {
-                    val *= radix;
-                    val += Tnum(c - '0');
+                    abs_val *= 16;
+                    abs_val += T(c - '0');
                 }
                 else if (c >= 'a' && c <= 'f') {
-                    val *= radix;
-                    val += Tnum(10);
-                    val += Tnum(c - 'a');
+                    abs_val *= 16;
+                    abs_val += T(c - 'a');
                 }
                 else if (c >= 'A' && c <= 'F') {
-                    val *= radix;
-                    val += Tnum(10);
-                    val += Tnum(c - 'A');
-                }
-                else {
-                    break;
-                }
-            }
-            goto END;
-        }
-    }
-
-    // body
-    while(pos < cnt) {
-        auto c = ptr[pos];
-        if (c >= '0' && c <= '9') {
-            val *= 10;
-            val += Tnum(c - '0');
-            ++pos;
-        }
-        else {
-            break;
-        }
-    }
-
-    // float?
-    if ($is<$float, Tnum>) {
-        // . ?
-        if (ptr[pos] == '.') {
-            pos++;
-
-            Tnum scale = 1;
-            while (pos < cnt) {
-                scale /= Tnum(10);
-
-                auto c = ptr[pos];
-                if (c >= '0' && c <= '9') {
-                    val += Tnum(c - '0') * scale;
-                    ++pos;
+                    abs_val *= 16;
+                    abs_val += T(c - 'A');
                 }
                 else {
                     break;
                 }
             }
         }
+    }
+    else {
+    RADIX_10:
+        while (pos_end < str_len) {
+            const auto c = str_ptr[pos_end];
 
-        // eE
-        switch (ptr[pos]) {
-            case 'e':
-                pos++;
-                break;
-            case 'E':
-                pos++;
-                break;
-            default:
-                goto END;
-        }
-
-        auto esign = ptr[pos];
-        switch (esign) {
-            case '+':
-            case '-':
-                ++pos;
-                break;
-            case '0': case '1': case '2': case '3': case '4': case '5' : case '6': case '7': case '8': case '9':
-                break;
-            default:
-                --pos;
-                goto END;
-        }
-
-        int exp = 0;
-        while (pos < cnt) {
-            auto c = ptr[pos];
             if (c >= '0' && c <= '9') {
-                exp = exp * 10 + int(c - '0');
-                ++pos;
+                abs_val *= 10;
+                abs_val += T(c - '0');
             }
             else {
                 break;
             }
         }
-
-        if (esign == '-') {
-            exp = -exp;
-        }
-
-        if (exp > 0) {
-            for (int i = 0; i < exp; ++i) {
-                val *= Tnum(10);
-            }
-        }
-        else if (exp < 0) {
-            for (int i = 0; i < exp; ++i) {
-                val /= Tnum(10);
-            }
-        }
     }
 
-END:
-    if (sign == '-') {
-        num = Tnum(Tnum(0) - val);
+    if (sign == '+') {
+        if (pos_end == pos_beg + 1) {
+            return false;
+        }
+        val = abs_val;
+    }
+    else if (sign == '-') {
+        if (pos_end == pos_beg + 1) {
+            return false;
+        }
+        val = T(0 - abs_val);
     }
     else {
-        num = val;
+        if (pos_end == pos_beg) {
+            return false;
+        }
+        val = abs_val;
     }
-    return int(pos);
+
+    text = str(str_ptr + pos_end, str_len - pos_end + 1);
+    return true;
 }
 
-NMS_API int _parse(StrView str, StrView fmt, u8&  val) { return _parse_number(str, fmt, val); }
-NMS_API int _parse(StrView str, StrView fmt, i8&  val) { return _parse_number(str, fmt, val); }
-NMS_API int _parse(StrView str, StrView fmt, u16& val) { return _parse_number(str, fmt, val); }
-NMS_API int _parse(StrView str, StrView fmt, i16& val) { return _parse_number(str, fmt, val); }
-NMS_API int _parse(StrView str, StrView fmt, u32& val) { return _parse_number(str, fmt, val); }
-NMS_API int _parse(StrView str, StrView fmt, i32& val) { return _parse_number(str, fmt, val); }
-NMS_API int _parse(StrView str, StrView fmt, u64& val) { return _parse_number(str, fmt, val); }
-NMS_API int _parse(StrView str, StrView fmt, i64& val) { return _parse_number(str, fmt, val); }
-NMS_API int _parse(StrView str, StrView fmt, f32& val) { return _parse_number(str, fmt, val); }
-NMS_API int _parse(StrView str, StrView fmt, f64& val) { return _parse_number(str, fmt, val); }
+template<class T>
+static bool _parse_float(str& text, str fmt, T& val) {
+    int int_part        = 0;
+    int decimal_part    = 0;
+    int exponent_part   = 0;
+
+    //1. int part
+    {
+        const auto stat = _parse_int(text, {}, int_part);
+        if (stat == false) {
+            return false;
+        }
+    }
+
+    //2. decimal part
+    if (text.count != 0 && text[0] == '.') {
+        auto tmp = str(text.data + 1, text.count - 1);
+        auto ret = _parse_int(tmp, {}, decimal_part);
+        if (ret) {
+            text = tmp;
+        }
+    }
+
+    //3. exponent part
+    if (text.count != 0 && (text[0] == 'E' || text[0] == 'e')) {
+        auto tmp = str(text.data + 1, text.count - 1);
+        auto ret = _parse_int(tmp, {}, exponent_part);
+        if (ret) {
+            text = tmp;
+        }
+    }
+
+    //4. make val
+    val = T(int_part);
+    if (decimal_part == 0) {}
+    else if (decimal_part < 10      ) { val += decimal_part / T(10);        }
+    else if (decimal_part < 100     ) { val += decimal_part / T(100);       }
+    else if (decimal_part < 1000    ) { val += decimal_part / T(1000);      }
+    else if (decimal_part < 10000   ) { val += decimal_part / T(10000);     }
+    else if (decimal_part < 100000  ) { val += decimal_part / T(100000);    }
+    else if (decimal_part < 1000000 ) { val += decimal_part / T(1000000);   }
+    else if (decimal_part < 10000000) { val += decimal_part / T(10000000);  }
+    else {}
+
+    // 5. set exponent
+    switch (exponent_part) {
+    case 0:                     break;
+    case +1:    val *= T(1E+1); break;
+    case +2:    val *= T(1E+2); break;
+    case +3:    val *= T(1E+3); break;
+    case +4:    val *= T(1E+4); break;
+    case +5:    val *= T(1E+5); break;
+    case +6:    val *= T(1E+6); break;
+    case +7:    val *= T(1E+7); break;
+    case +8:    val *= T(1E+8); break;
+    case +9:    val *= T(1E+9); break;
+    case -1:    val *= T(1E-1); break;
+    case -2:    val *= T(1E-2); break;
+    case -3:    val *= T(1E-3); break;
+    case -4:    val *= T(1E-4); break;
+    case -5:    val *= T(1E-5); break;
+    case -6:    val *= T(1E-6); break;
+    case -7:    val *= T(1E-7); break;
+    case -8:    val *= T(1E-8); break;
+    case -9:    val *= T(1E-9); break;
+    default:    val *= math::exp(T(exponent_part));
+    }
+
+    return true;
+}
+
+NMS_API bool _parse_num(str& text, str style, u8&  val) { return _parse_int(text, style, val); }
+NMS_API bool _parse_num(str& text, str style, i8&  val) { return _parse_int(text, style, val); }
+NMS_API bool _parse_num(str& text, str style, u16& val) { return _parse_int(text, style, val); }
+NMS_API bool _parse_num(str& text, str style, i16& val) { return _parse_int(text, style, val); }
+NMS_API bool _parse_num(str& text, str style, u32& val) { return _parse_int(text, style, val); }
+NMS_API bool _parse_num(str& text, str style, i32& val) { return _parse_int(text, style, val); }
+NMS_API bool _parse_num(str& text, str style, u64& val) { return _parse_int(text, style, val); }
+NMS_API bool _parse_num(str& text, str style, i64& val) { return _parse_int(text, style, val); }
+NMS_API bool _parse_num(str& text, str style, f32& val) { return _parse_float(text, style, val); }
+NMS_API bool _parse_num(str& text, str style, f64& val) { return _parse_float(text, style, val); }
+#pragma endregion
+
+#pragma region parse: string
+NMS_API bool _parse_str(str& text, str style, str& val) {
+    (void)style;
+    val = text;
+    text = str{};
+    return true;
+}
+
+NMS_API bool _parse_str(str& text, str style, bool& val) {
+    str str_val;
+    auto ret = _parse_str(text, style, str_val);
+
+    if (!ret) {
+        return false;
+    }
+
+    if (str_val == str("true") || str_val == str("True") || str_val == str("TRUE")) {
+        val = true;
+        return true;
+    }
+    if (str_val == str("false") || str_val == str("False") || str_val == str("FALSE")) {
+        val = false;
+        return true;
+    }
+
+    return false;
+}
+
+#pragma endregion
 
 }

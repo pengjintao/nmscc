@@ -15,15 +15,15 @@ NMS_API Program& Vrun::sProgram() {
         _init = true;
 
         static auto& srcs = program.src_;
-        srcs += mkStrView(nms_cuda_kernel_src);
+        srcs += str(nms_cuda_kernel_src);
     }
 
     return program;
 }
 
 NMS_API Module& Vrun::sModule() {
-    static const StrView src_path = "~/.nms/cuda_default.cu";
-    static const StrView ptx_path = "~/.nms/cuda_default.ptx";
+    static const io::Path src_path = "~/.nms/cuda_default.cu";
+    static const io::Path ptx_path = "~/.nms/cuda_default.ptx";
     static auto& program = sProgram();
 
     static auto _init = false;
@@ -32,27 +32,26 @@ NMS_API Module& Vrun::sModule() {
         _init = true;
 
         if (io::exists(ptx_path)) {
-            io::TxtFile ptx_file(ptx_path, io::File::Read);
-            ptx_file.read(program.ptx_, ptx_file.size());
+            auto ptx_file = io::TxtFile::open_for_read(ptx_path);
+            ptx_file.readall(program.ptx_);
         }
-
 
         const auto& src_str = program.src();
 
-        if (program.ptx().count() == 0) {
+        if (program.ptx().count == 0) {
             const auto ret = program.compile();
 
             if (ret) {
                 const auto ptx_str = program.ptx();
 
                 io::mkdir("~/.nms");
-                if (src_str.count() > 0) {
-                    io::TxtFile src_file(src_path, io::File::Write);
+                if (src_str.count > 0) {
+                    auto src_file = io::TxtFile::open_for_write(src_path);
                     src_file.write(src_str);
                 }
 
-                if (ptx_str.count() > 0) {
-                    io::TxtFile ptx_file(ptx_path, io::File::Write);
+                if (ptx_str.count > 0) {
+                    auto ptx_file = io::TxtFile::open_for_write(ptx_path);
                     ptx_file.write(ptx_str);
                 }
             }
@@ -68,11 +67,11 @@ NMS_API Module::fun_t Vrun::_get_kernel(u32 fid) {
 
     char name[64];
     auto count = snprintf(name, sizeof(name), "nms_cuda_foreach_%u", fid);
-    auto func  = mod.get_kernel(StrView(name, u32(count)));
+    auto func  = mod.get_kernel(str(name, u32(count)));
     return func;
 }
 
-NMS_API u32 Vrun::_signin_impl(StrView func, StrView ret_type, StrView arg_type) {
+NMS_API u32 Vrun::_signin_impl(str func, str ret_type, str arg_type) {
     auto& src = sProgram().src_;
     static auto func_id = 0u;
 

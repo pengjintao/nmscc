@@ -20,27 +20,29 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <!--cpp: langauge-->
-      <AdditionalOptions>/std:c++latest %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(PlatformToolset)' == 'v140'">/std:c++latest %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard Condition="'$(PlatformToolset)' == 'v141'">stdcpplatest</LanguageStandard>
       <WarningLevel>EnableAllWarnings</WarningLevel>
-      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <ExceptionHandling>Async</ExceptionHandling>
+
       <!-- optimization -->
       <Optimization Condition="'$(Configuration)'=='Debug'">Disabled</Optimization>
       <Optimization Condition="'$(Configuration)'=='Release'">Full</Optimization>
       <InlineFunctionExpansion Condition="'$(Configuration)'=='Debug'">Disabled</InlineFunctionExpansion>
       <InlineFunctionExpansion Condition="'$(Configuration)'=='Release'">AnySuitable</InlineFunctionExpansion>
-      <!--debug-->
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <!--library-->
-      <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreaded</RuntimeLibrary>
-      <RuntimeLibrary Condition="'$(Configuration)'=='Debug'">MultiThreadedDebug</RuntimeLibrary>
-      <!-- path -->
-      <ObjectFileName>$(IntDir)\%(RelativeDir)\%(FileName)%(Extension).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <FloatingPointModel>Fast</FloatingPointModel>
-      <ExceptionHandling>Async</ExceptionHandling>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+
+      <!--debug-->
+
+      <!--library-->
+      <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary Condition="'$(Configuration)'=='Debug'">MultiThreadedDebug</RuntimeLibrary>
+
+      <!-- path -->
+      <ObjectFileName>$(IntDir)\%(RelativeDir)\%(FileName)%(Extension).obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <ImportLibrary>$(OutDir)..\lib\$(TargetName).lib</ImportLibrary>

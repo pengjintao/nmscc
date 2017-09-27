@@ -17,9 +17,9 @@ enum class Level
     Fatal,
 };
 
-inline auto enum_names(Level) {
-    static StrView names[] = { "  ", "--", "**", "??", "!!", "XX", "XX" };
-    return View<const StrView>{ names};
+inline auto _make_enum_names(Level) {
+    static str names[] = { "  ", "--", "**", "??", "!!", "XX", "XX" };
+    return View<const str>{ names};
 }
 
 extern Level gLevel;
@@ -39,51 +39,50 @@ NMS_API Level   getLevel();
 NMS_API void    setLogPath(const Path& log_path);
 
 /* log buffer */
-NMS_API IString& _gStrBuff();
+NMS_API IString& _tls_strbuf();
 
 /* show log message */
 NMS_API void    _message(Level level, IString& s);
 
 template<class ...T>
-void message(Level level, const StrView& fmt, const T& ...args) {
-    IString& buf = _gStrBuff();
-    buf._resize(64);
+void message(Level level, const str& fmt, const T& ...args) {
+    IString& buf = _tls_strbuf();
     sformat(buf, fmt, args...);
     _message(level, buf);
 }
 
 /* nms.io.log: debug message */
 template<class ...T>
-__forceinline void debug(const StrView& fmt, const T& ...args) {
+__forceinline void debug(const str& fmt, const T& ...args) {
     message(Level::Debug, fmt, args...);
 }
 
 /* nms.io.log: info message */
 template<class ...T>
-__forceinline void info (const StrView& fmt, const T& ...args) {
+__forceinline void info (const str& fmt, const T& ...args) {
     message(Level::Info,  fmt, args...);
 }
 
 /* nms.io.log: warning message */
 template<class ...T>
-__forceinline void warn (const StrView& fmt, const T& ...args) {
+__forceinline void warn (const str& fmt, const T& ...args) {
     message(Level::Warn,  fmt, args...);
 }
 
 /* nms.io.log: alert message */
 template<class ...T>
-__forceinline void alert(const StrView& fmt, const T& ...args) {
+__forceinline void alert(const str& fmt, const T& ...args) {
     message(Level::Alert, fmt, args...);
 }
 
 /* nms.io.log: error message */
 template<class ...T>
-__forceinline void error(const StrView& fmt, const T& ...args) {
+__forceinline void error(const str& fmt, const T& ...args) {
     message(Level::Error, fmt, args...); }
 
 /* nms.io.log: fatal message */
 template<class ...T>
-__forceinline void fatal(const StrView& fmt, const T& ...args) {
+__forceinline void fatal(const str& fmt, const T& ...args) {
     message(Level::Fatal, fmt, args...);
 }
 

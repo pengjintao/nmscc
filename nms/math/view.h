@@ -6,107 +6,104 @@ namespace nms::math
 {
 
 #pragma region view
-template<class T>
+template<typename T>
 auto _view_cast(const T& t, Tver<0> ) -> Scalar<T> {
-    return t;
+    return { t };
 }
 
-template<class T>
+template<typename T>
 auto _view_cast(const T& t, Tver<1> ) -> typename T::Tview {
     return t;
 }
 
-template<class T>
+template<typename T>
 auto view_cast(const T&t) {
     return _view_cast(t, Tver<1>{});
 }
 
-template<class X, class Y, class= typename X::Tview, class = typename Y::Tview>
+template<typename X, typename Y, typename= typename X::Tview, typename = typename Y::Tview>
 auto _view_test_xy(Tver<2>)  {
     return 0;
 }
 
-template<class X, class Y, class = typename X::Tview, class = $when<($is<$number, Y> || $is<bool, Y>)> >
+template<typename X, typename Y, typename = typename X::Tview, typename = $when<($is<$number, Y> || $is<bool, Y>)> >
 auto _view_test_xy(Tver<1>)  {
     return 0;
 }
 
-template<class X, class Y, class = $when_is<$number, X>, class = typename Y::Tview>
+template<typename X, typename Y, typename = $when_is<$number, X>, typename = typename Y::Tview>
 auto _view_test_xy(Tver<0>)  {
     return 0;
 }
 
-template<class X, class Y>
+template<typename X, typename Y>
 auto view_test_xy() -> decltype(_view_test_xy<X, Y>(Tver<2>{})) {
     return 0;
 }
 #pragma endregion
 
 #pragma region Parallel
-template<class F, class ...T>
+template<typename F, typename ...T>
 struct Parallel;
 
-template<class F, class T>
+template<typename F, typename T>
 struct Parallel<F, T>
 {
-    using Tview = Parallel;
-
     constexpr static const auto $rank = T::$rank;
+    using Tview = Parallel;
+    using Tsize = typename T::Tsize;
+    using Tdims = Vec<Tsize, $rank>;
 
-    Parallel(const T& t)
-        : t_(t) {}
+    T   vt;
 
-    template<class I>
-    __forceinline auto size(I idx) const noexcept {
-        return t_.size(idx);
+    /* dims of the view */
+    __declspec(property(get=get_dims)) Tdims dims;
+
+    Tdims get_dims() const noexcept {
+        return vt.dims;
     }
 
-    template<class ...I>
+    template<typename ...I>
     __forceinline auto operator()(I ...idx) const noexcept {
-        return F::run(t_(idx...));
+        return F::run(vt(idx...));
     }
-
-protected:
-    T   t_;
 };
 
-template<class F, class X, class Y>
-struct Parallel<F, X, Y>
+template<typename F, typename Tx, typename Ty>
+struct Parallel<F, Tx, Ty>
 {
+    constexpr static const auto $rank = Tx::$rank | Ty::$rank;
+
     using Tview = Parallel;
+    using Tsize = typename Tx::Tsize;
+    using Tdims = Vec<Tsize, $rank>;
 
-    constexpr static const auto $rank = X::$rank | Y::$rank;
+    Tx  vx;
+    Ty  vy;
 
-    Parallel(const X& x, const Y& y)
-        : x_(x), y_(y) {}
+    /* dims of the view */
+    __declspec(property(get=get_dims)) Tdims dims;
 
-    template<class I>
-    __forceinline auto size(I idx) const noexcept {
-        const auto sx = x_.size(idx);
-        const auto sy = y_.size(idx);
-        return X::$rank == 0 ? sy : Y::$rank == 0 ? sx : nms::min(sx, sy);
+    Tdims get_dims() const noexcept {
+        return select_idx<Tx::$rank != 0 ? 0 : 1>(vx.dims, vy.dims);
     }
 
-    template<class ...I>
+    template<typename ...I>
     __forceinline auto operator()(I ...idx) const noexcept {
-        return F::run(x_(idx...), y_(idx...));
+        return F::run(vx(idx...), vy(idx...));
     }
-
-protected:
-    X   x_;
-    Y   y_;
 };
 
 /* make Parallel<F(x)> */
-template<class F, class X>
-auto mkParallel(const X& x) {
+template<typename F, typename X>
+auto make_parallel(const X& x) {
     using Vx = decltype(view_cast(x));
     return Parallel<F, Vx>{ x };
 }
 
 /* make Parallel<F(A,B)> */
-template<class F, class X, class Y>
-auto mkParallel(const X& x, const Y& y) {
+template<typename F, typename X, typename Y>
+auto make_parallel(const X& x, const Y& y) {
     using Vx = decltype(view_cast(x));
     using Vy = decltype(view_cast(y));
     return Parallel<F, Vx, Vy>{ x, y };
@@ -115,42 +112,52 @@ auto mkParallel(const X& x, const Y& y) {
 #pragma endregion
 
 #pragma region Reduce
-template<class F, class ...T>
+template<typename F, typename ...T>
 struct Reduce;
 
-template<class F, class X>
-struct Reduce<F, X>
+template<typename F, typename T>
+struct Reduce<F, T>
 {
+    constexpr static const auto $rank = T::$rank - 1;
+
     using Tview = Reduce;
-    constexpr static const auto $rank = X::$rank - 1;
+    using Tsize = typename T::Tsize;
+    using Tdims = Vec<Tsize, T::$rank - 1>;
 
-    Reduce(const X& x) noexcept
-        : x_(x)
-    {}
+    T   vt;
 
-    template<class I>
-    auto size(I idx) const noexcept {
-        return x_.size(idx + 1);
+    /* dims of the view */
+    __declspec(property(get=get_dims)) Tdims dims;
+
+    Tdims get_dims() const noexcept {
+        return Reduce::_make_dims($index_seq<$rank>, vt.dims);
     }
 
-    template<class ...I>
+    template<typename ...I>
     auto operator()(I ...ids) const {
-        const auto  n = x_.size(0);
+        const auto  n = vt.dims[0];
 
-        auto ret = x_(0, ids...);
-        for (u32 i = 1; i < n; ++i) {
-            ret = F::run(ret, x_(i, ids...));
+        auto ret = vt(0, ids...);
+        for (Tsize i = 1; i < n; ++i) {
+            ret = F::run(ret, vt(i, ids...));
         }
         return ret;
     }
 
 private:
-    X   x_;
+    template<typename Tdims>
+    static Vec<Tsize, 0> _make_dims(Tu32<>, const Tdims& /*dims*/) {
+        return { 0 };
+    }
 
+    template<u32 ...I, typename Tdims>
+    static Vec<Tsize, u32(sizeof...(I))> _make_dims(Tu32<I...>, const Tdims& dims) {
+        return { dims[I + 1]... };
+    }
 };
 
-template<class F, class X>
-auto mkReduce(const X& x) -> Reduce<F, decltype(view_cast(x)) > {
+template<typename F, typename X>
+auto make_reduce(const X& x) -> Reduce<F, decltype(view_cast(x)) > {
     return { view_cast(x) };
 }
 
@@ -158,44 +165,38 @@ auto mkReduce(const X& x) -> Reduce<F, decltype(view_cast(x)) > {
 
 #pragma region vline
 
-template<class T, u32 N>
+template<typename T, u32 N>
 struct Vline
 {
-    using Tview = Vline;
-    using Tstep = Vec<T, N>;
     constexpr static const auto $rank = N;
 
-    Vline(const T(&step)[N])
-        : step_(step)
-    {}
+    using Tview = Vline;
+    using Tidxs = Vec<T, N>;
+    using Tsize = u32;
+    using Tdata = T;
+    using Tdims = Vec<Tsize, $rank>;
 
-    static constexpr u32 rank() {
-        return N;
+    Tidxs   step;
+
+    __declspec(property(get=get_dims)) Tdims dims;
+    Tdims get_dims() const noexcept {
+        return { 0 };
     }
 
-    template<class I>
-    u32 size(I /*idx*/) const noexcept {
-        return 0;
-    }
-
-    template<class ...I>
-    T operator()(I ...ids) const {
-        static_assert(u32(sizeof...(I)) == N,   "unexpect arguments count, should be N");
-
-        const T idx[] = { T(ids)... };
-
-        T offset = 0;
-        for (u32 k = 0; k < N; ++k) {
-            offset += step_[k] * idx[k];
-        }
-        return offset;
+    template<typename ...Tidx>
+    Tdata operator()(Tidx ...idxs) const {
+        static_assert(sizeof...(Tidx) == $rank,   "unexpect arguments count, should be `$rank`");
+        return get_offsets($index_seq<$rank>, idxs...);
     }
 
 private:
-    Tstep   step_;
+    template<u32 ...Idim, typename ...Tidx>
+    Tdata get_offsets(Tu32<Idim...>, Tidx ...idxs) const {
+        return sum((Tdata(step[Idim])*idxs)...);
+    }
 };
 
-template<class T, class ...U>
+template<typename T, typename ...U>
 constexpr auto vline(const T& t, const U& ...u) {
     return Vline<T, u32(1 + sizeof...(U))>({ T(t), T(u)... });
 }
@@ -203,21 +204,22 @@ constexpr auto vline(const T& t, const U& ...u) {
 
 #pragma region veye
 
-template<class T>
+template<typename T>
 struct Veye
 {
 public:
     using Tview = Veye;
+    using Tsize = u32;
+    using Tdims = Vec<Tsize, 0>;
+
     constexpr static const auto $rank = 0;
 
-    constexpr Veye() = default;
-
-    template<class I>
-    u32 size(I /*idx*/) const noexcept {
-        return 0;
+    __declspec(property(get=get_dims)) Tdims dims;
+    Tdims get_dims() const noexcept {
+        return { 0 };
     }
 
-    template<class ...I>
+    template<typename ...I>
     T operator()(I ...i) const noexcept {
         static_assert($all_is<$int, I...>,  "unexpect type, shold be int");
         static constexpr auto N = u32(sizeof...(I));
@@ -234,7 +236,7 @@ public:
     }
 };
 
-template<class T>
+template<typename T>
 constexpr auto veye() {
     return Veye<T>{};
 }

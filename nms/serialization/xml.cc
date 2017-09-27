@@ -6,66 +6,66 @@ namespace nms::serialization
 
 #pragma region format: xml
 
-NMS_API void XDOM::_format_xml_begin(IString& buf) const {
-    const auto& v = val();
+NMS_API void DOM::_format_xml_begin(IString& buf) const {
+    const auto& v = node;
     buf += "<xml? version=\"1.0\" encoding=\"utf-8\" ?>\n";
-    sformat(buf, "<root type={}>", v.type());
+    nms::sformat(buf, "<root type={}>", v.type);
 }
 
-NMS_API void XDOM::_format_xml_end(IString& buf) const {
+NMS_API void DOM::_format_xml_end(IString& buf) const {
     buf += "</root>";
 }
 
-NMS_API void XDOM::_format_xml(IString& buf, u32 level) const {
+NMS_API void DOM::_format_xml_body(IString& buf, u32 level) const {
     static const auto $indent = 2;
-    const auto& v = val();
+    const auto& v = this->node;
 
-    switch (v.type()) {
-    case Type::null:    _format(buf, {}, "");           break;
-    case Type::boolean: _format(buf, {}, v.bool_val_);  break;
-    case Type::u8:      _format(buf, {}, v.u8_val_);    break;
-    case Type::i8:      _format(buf, {}, v.i8_val_);    break;
-    case Type::u16:     _format(buf, {}, v.u16_val_);   break;
-    case Type::i16:     _format(buf, {}, v.i16_val_);   break;
-    case Type::u32:     _format(buf, {}, v.u32_val_);   break;
-    case Type::i32:     _format(buf, {}, v.i32_val_);   break;
-    case Type::u64:     _format(buf, {}, v.u64_val_);   break;
-    case Type::i64:     _format(buf, {}, v.i64_val_);   break;
-    case Type::f32:     _format(buf, {}, v.f32_val_);   break;
-    case Type::f64:     _format(buf, {}, v.f64_val_);   break;
+    switch (v.type) {
+    case Type::$null:   nms::sformat(buf, FormatStyle{}, "");        break;
+    case Type::$bool:   nms::sformat(buf, FormatStyle{}, v.$bool);   break;
+    case Type::$u8:     nms::sformat(buf, FormatStyle{}, v.$u8 );    break;
+    case Type::$i8:     nms::sformat(buf, FormatStyle{}, v.$i8 );    break;
+    case Type::$u16:    nms::sformat(buf, FormatStyle{}, v.$u16);    break;
+    case Type::$i16:    nms::sformat(buf, FormatStyle{}, v.$i16);    break;
+    case Type::$u32:    nms::sformat(buf, FormatStyle{}, v.$u32);    break;
+    case Type::$i32:    nms::sformat(buf, FormatStyle{}, v.$i32);    break;
+    case Type::$u64:    nms::sformat(buf, FormatStyle{}, v.$u64);    break;
+    case Type::$i64:    nms::sformat(buf, FormatStyle{}, v.$i64);    break;
+    case Type::$f32:    nms::sformat(buf, FormatStyle{}, v.$f32);    break;
+    case Type::$f64:    nms::sformat(buf, FormatStyle{}, v.$f64);    break;
 
-    case Type::datetime:
-        DateTime(v.i64_val_).format(buf, {});
+    case Type::$time:
+        DateTime::from_stamp(v.$time).sformat(buf, {});
         break;
 
-    case Type::number: {
-        _format(buf, {}, v.str());
-        break;
-    }
-
-    case Type::key: case Type::string: {
-        buf += "\"";
-        _format(buf, {}, v.str());
-        buf += "\"";
+    case Type::$num: {
+        nms::sformat(buf, FormatStyle{}, str{ v.$str, v.size });
         break;
     }
 
-    case Type::array: {
+    case Type::$key: case Type::$str: {
+        buf += "\"";
+        nms::sformat(buf, FormatStyle{}, str{ v.$str, v.size });
+        buf += "\"";
+        break;
+    }
+
+    case Type::$array: {
         buf += "\n";
         buf.appends(level*$indent, ' ');
 
         auto k = 0u;
         for (auto itr = begin(); itr != end(); ++k, ++itr) {
             const auto element = *itr;
-            sformat(buf, "{ }<{} type=\"{}\">", (level + 1) * $indent, k, element.type());
-            element._format_xml(buf, level + 1);
-            sformat(buf, "</{}>", k);
+            nms::sformat(buf, "{ }<{} type=\"{}\">", (level + 1) * $indent, k, element.type);
+            element._format_xml_body(buf, level + 1);
+            nms::sformat(buf, "</{}>", k);
             buf += "\n";
             buf.appends(level*$indent, ' ');
         }
         break;
     }
-    case Type::object: {
+    case Type::$object: {
         buf += "\n";
         buf.appends(level*$indent, ' ');
 
@@ -73,9 +73,9 @@ NMS_API void XDOM::_format_xml(IString& buf, u32 level) const {
         for (auto itr = begin(); itr != end(); ++k, ++itr) {
             const auto element = *itr;
             const auto key     = itr.key();
-            sformat(buf, "{ }<{} type=\"{}\">", $indent, key, element.type());
-            element._format_xml(buf, level + 1);
-            sformat(buf, "</{}>", key);
+            nms::sformat(buf, "{ }<{} type=\"{}\">", $indent, key, element.type);
+            element._format_xml_body(buf, level + 1);
+            nms::sformat(buf, "</{}>", key);
             buf += "\n";
             buf.appends(level*$indent, ' ');
         }
@@ -89,14 +89,12 @@ NMS_API void XDOM::_format_xml(IString& buf, u32 level) const {
 
 #pragma region unittest
 struct TestObject
-    : public IFormatable
-    , public ISerializable
 {
-    NMS_PROPERTY_BEGIN;
-    typedef String<32>    NMS_PROPERTY(a);
-    typedef f32x4         NMS_PROPERTY(b);
-    typedef DateTime      NMS_PROPERTY(c);
-    NMS_PROPERTY_END;
+    NMS_REFLECT_BEGIN;
+    typedef String<32>  NMS_MEMBER(a);
+    typedef f32x4       NMS_MEMBER(b);
+    typedef DateTime    NMS_MEMBER(c);
+    NMS_REFLECT_END;
 };
 
 nms_test(xml_serialize) {
@@ -106,7 +104,7 @@ nms_test(xml_serialize) {
     obj.c = DateTime(2017, 9, 3, 8, 30, 12);
 
     Tree<64> node;
-    node << obj;
+    //node << obj;
 
     io::log::info("obj = {}", obj);
     io::log::info("xml = {:xml}", node);

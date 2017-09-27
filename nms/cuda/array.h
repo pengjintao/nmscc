@@ -20,10 +20,10 @@ public:
     using Tvrun = Vrun;
     using Tsize = typename base::Tsize;
 
-    explicit Array(const Tsize(&len)[N])
-        : base(nullptr, len)
+    explicit Array(const Tsize(&dims)[N])
+        : base(nullptr, dims)
     {
-        const auto cnt = base::count();
+        const auto cnt = base::count;
         if (cnt != 0) {
             base::data_ = mnew<T>(cnt);
         }

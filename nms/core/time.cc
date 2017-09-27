@@ -48,7 +48,7 @@ NMS_API f64 clock() {
 #endif
 
 // UTC
-NMS_API void DateTime::init_stamp(i64 stamp) {
+NMS_API DateTime DateTime::from_stamp(i64 stamp) {
     const time_t clock = stamp;
 
     struct tm tm = {};
@@ -58,16 +58,21 @@ NMS_API void DateTime::init_stamp(i64 stamp) {
     ::gmtime_r(&clock, &tm);
 #endif
     tm.tm_year += 1900;
-    year    = u16(tm.tm_year);
-    month   = u16(tm.tm_mon + 1);
-    day     = u16(tm.tm_mday);
-    hour    = u16(tm.tm_hour);
-    minute  = u16(tm.tm_min);
-    second  = u16(tm.tm_sec);
+
+    const DateTime ret = {
+        u16(tm.tm_year),
+        u16(tm.tm_mon + 1),
+        u16(tm.tm_mday),
+        u16(tm.tm_hour),
+        u16(tm.tm_min),
+        u16(tm.tm_sec)
+    };
+
+    return ret;
 }
 
 // UTC
-NMS_API i64 DateTime::stamp() const {
+NMS_API DateTime::Tstamp DateTime::get_stamp() const {
     tm tm = {};
     tm.tm_year  = year;
     tm.tm_mon   = month- 1;
@@ -82,38 +87,36 @@ NMS_API i64 DateTime::stamp() const {
 #else
     const auto result = ::timegm(&tm);
 #endif
-    return result;
+    return Tstamp(result);
 }
 
 NMS_API DateTime DateTime::now() {
-    const auto  stamp = ::time(nullptr);
-    struct tm   tm;
+    const auto  time_stamp = ::time(nullptr);
+    struct tm   time_struct;
 #ifdef NMS_OS_WINDOWS
-    ::localtime_s(&tm, &stamp);
+    ::localtime_s(&time_struct, &time_stamp);
 #else
     ::localtime_r(&stamp, &tm);
 #endif
     return {
-        u32(tm.tm_year) + 1900,
-        u32(tm.tm_mon)+1,
-        u32(tm.tm_mday),
-        u32(tm.tm_hour),
-        u32(tm.tm_min),
-        u32(tm.tm_sec)
+        u32(time_struct.tm_year) + 1900,
+        u32(time_struct.tm_mon)+1,
+        u32(time_struct.tm_mday),
+        u32(time_struct.tm_hour),
+        u32(time_struct.tm_min),
+        u32(time_struct.tm_sec)
     };
 }
 
-NMS_API DateTime DateTime::parse(StrView str) {
-    DateTime dt;
-    auto cstr = str.data();
-    (void)sscanf(cstr, "%hu-%hu-%huT%hu:%hu:%hu", &dt.year, &dt.month, &dt.day, &dt.hour, &dt.minute, &dt.second);
-    return dt;
+NMS_API bool DateTime::parse(str text, str /*fmt*/, DateTime& dt) {
+    auto cnt  = sscanf(text.data, "%hu-%hu-%huT%hu:%hu:%hu", &dt.year, &dt.month, &dt.day, &dt.hour, &dt.minute, &dt.second);
+    return (cnt == 6);
 }
 
-NMS_API void DateTime::format(IString& buf, StrView /*fmt*/) const {
-    const auto len = buf.count();
+NMS_API void DateTime::sformat(IString& buf, const FormatStyle& /*fmt*/) const {
+    const auto len = buf.count;
     buf.reserve(len+32);
-    const auto dat = buf.data();
+    const auto dat = buf.data;
     const auto ret = ::snprintf(dat+len, 32, "%hu-%02hu-%02huT%02hu:%02hu:%02hu", year, month, day, hour, minute, second);
     if (ret > 0) {
         buf._resize(len + u32(ret));

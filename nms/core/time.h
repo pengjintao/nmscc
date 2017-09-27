@@ -6,6 +6,9 @@
 namespace nms
 {
 
+struct DateTime;
+using  time = DateTime;
+
 /* wall time */
 struct DateTime
 {
@@ -17,13 +20,7 @@ struct DateTime
     u16 minute  = 0;    // minute       [0~59]
     u16 second  = 0;    // second       [0~59]
 
-    constexpr DateTime()
-        : year(1990), month(1), day(1)
-    {}
-
-    explicit DateTime(i64 stamp) {
-        init_stamp(stamp);
-    }
+    constexpr DateTime() = default;
 
     constexpr DateTime(u32 year, u32 month, u32 day)
         : year(u16(year)), month(u16(month)), day(u16(day))
@@ -34,27 +31,37 @@ struct DateTime
         , hour(u16(hour)), minute(u16(minute)), second(u16(second))
     {}
 
-    NMS_API static DateTime parse(StrView str);
-    NMS_API        void     format(IString& buff, StrView fmt) const;
+#pragma region property
+    using Tstamp = i64;
+    NMS_API Tstamp get_stamp() const;
 
-#ifdef _M_CEE
-    __forceinline DateTime(System::DateTime v)
-        : year(v.Year), month(v.Month), day(v.Day)
-        , hour(v.Hour), minute(v.Minute), second(v.Second)
-    {}
-#endif
+    __declspec(property(get=get_stamp)) Tstamp stamp;   // time stamp
+#pragma endregion
 
-    NMS_API i64 stamp() const;
+#pragma region method
+    NMS_API static DateTime from_stamp(i64 stamp);
     NMS_API static DateTime now();
+#pragma endregion
 
+#pragma region operator
     friend i64 operator-(const DateTime& a, const DateTime& b) {
-        const auto ta = a.stamp();
-        const auto tb = b.stamp();
+        const auto ta = a.stamp;
+        const auto tb = b.stamp;
         return ta - tb;
     }
+#pragma endregion
 
-private:
-    NMS_API void init_stamp(i64 stamp);
+#pragma region format/parse
+    static DateTime from_str(str text) {
+        DateTime ret;
+        DateTime::parse(text, {}, ret);
+        return ret;
+    }
+
+    NMS_API static bool parse(str text, str fmt, DateTime& datetime);
+    NMS_API void        sformat(IString& buff, const FormatStyle& fmt) const;
+#pragma endregion
+
 };
 
 /*!

@@ -6,6 +6,47 @@
 namespace nms
 {
 
+#pragma region format: pre-define
+struct FormatStyle;
+
+template<typename T>
+void sformat(IString& outbuf, const FormatStyle& style, const T& value);
+#pragma endregion
+
+#pragma region scalar
+template<typename T>
+struct Scalar
+{
+    constexpr static const u32 $rank = 0;
+
+    using Trank = u32;
+    using Tsize = u32;
+    using Tdata = T;
+    using Tview = Scalar;
+    using Tdims = Vec<Tsize, 0>;
+
+    T val;
+
+    __declspec(property(get=get_dims)) Tdims dims;
+
+    Tdims get_dims() const noexcept {
+        return {0};
+    }
+
+    template<typename ...I>
+    const T& operator()(I .../*idx*/) const noexcept {
+        return val;
+    }
+
+    template<typename ...I>
+    T& operator()(I .../*idx*/) noexcept {
+        return val;
+    }
+};
+#pragma endregion
+
+#pragma region viewinfo
+
 struct ViewInfo
 {
     char mask;
@@ -21,23 +62,12 @@ struct ViewInfo
         return !(a==b);
     }
 
-    NMS_API void format(IString& buf) const;
+    NMS_API void sformat(IString& buf) const;
 };
 
+#pragma endregion
 
-namespace
-{
-template<class T, u32 N>
-constexpr static ViewInfo mk_viewinfo() {
-    return { '$',
-             $is<$uint, T> ? 'u' : $is<$sint, T> ? 'i' : $is<$float, T> ? 'f' : '?',
-             char('0' + sizeof(T)),
-             char('0' + N)
-    };
-}
-}
-
-template<class T, u32 N>
+template<typename T, u32 N>
 struct View
 {
 #pragma region defines
@@ -54,109 +84,113 @@ struct View
     using Tinfo     = ViewInfo;
     using Tview     = View;
 
-    template<class U, u32 M>
+    template<typename U, u32 M>
     friend struct View;
+
+    /*! type-info */
+    constexpr static Tinfo $info ={
+        '$',
+        $is<$uint, T> ? 'u' : $is<$sint, T> ? 'i' : $is<$float, T> ? 'f' : '?',
+        char('0' + sizeof(T)),
+        char('0' + N)
+    };
 
 #pragma endregion
 
 #pragma region constructors
     /*! default constructor */
     constexpr View() noexcept
-        : data_{nullptr}, size_{0}, step_{0}
+        : data_{nullptr}, dims_{0}, step_{0}
     { }
 
     /*! default destructor */
     ~View() = default;
 
     /*! construct view with data, size, step */
+    constexpr View(Tdata* data, const Tdims& size, const Tidxs& step) noexcept
+        : data_{ data }, dims_{ size }, step_(step)
+    {}
+
+     /*! construct view with data, size */
+    constexpr View(Tdata* data, const Tdims& size) noexcept
+        : data_{ data }, dims_{ size }, step_{ _make_step_from_size(size.data) }
+    {}
+
+    /*! construct view with data, size, step */
     constexpr View(Tdata* data, const Tsize(&size)[$rank], const Tstep(&step)[$rank]) noexcept
-        : data_{ data }, size_{ size }, step_(step)
+        : data_{ data }, dims_{ Tdims::from_array(size) }, step_{ Tidxs::from_array(step) }
     {}
 
     /*! construct view with data, size */
     constexpr View(Tdata* data, const Tsize(&size)[$rank]) noexcept
-        : data_{ data }, size_{ size }, step_{ mkstep(size) }
+        : data_{ data }, dims_{ Tdims::from_array(size) }, step_{ _make_step_from_size(size) }
     {}
 
     /*! convert to const View */
     operator View<const Tdata, $rank>() const noexcept {
-        return { data_, size_, step_ };
+        return { data_, dims_, step_ };
     }
 
 #pragma endregion
 
 #pragma region properties
-    static constexpr auto rank() noexcept{
-        return $rank;
-    }
+    /*! data storage of the view */
+    __declspec(property(get=get_data)) Tdata* data;
 
-    /*! get data pointer */
-    Tdata* data() noexcept {
+    Tdata* get_data() noexcept {
         return data_;
     }
 
-    /*! get data pointer */
-    const Tdata* data() const noexcept {
+    const Tdata* get_data() const noexcept {
         return data_;
     }
 
-    /*! get n-dim size */
-    Tdims size() const noexcept {
-        return size_;
+    /*! size of the view */
+    __declspec(property(get=get_size)) Tdims size;
+
+    /*! dimension of the view */
+    __declspec(property(get=get_size)) Tdims dims;
+
+    Tdims get_size() const noexcept {
+        return dims_;
     }
 
-    /*! get n-dim step */
-    Tidxs step() const noexcept {
+    /*! element step of the view */
+    __declspec(property(get=get_step)) Tidxs step;
+
+    Tidxs get_step() const noexcept {
         return step_;
     }
 
     /*! get total elements count */
-    Tsize count() const noexcept {
-        return iprod(Tseq<$rank>{}, size_);
+    __declspec(property(get=get_count)) Tsize count;
+
+    Tsize get_count() const noexcept {
+        return iprod($index_seq<$rank>, dims_);
     }
 
-    /*! get idx-dim size  @see size */
-    template<class Tdim>
-    constexpr Tsize size(Tdim dim) const noexcept {
-        return size_[dim];
-    }
 
-    /*! get idx-dim step @see step */
-    template<class Tdim>
-    constexpr Tstep step(Tdim dim) const noexcept {
-        return step_[dim];
-    }
-
-    /*! * test if empty (count()==0)  @see count */
-    constexpr auto isEmpty() const noexcept {
-        return count() == 0;
-    }
-
-    /*! get type-info */
-    constexpr static Tinfo info() {
-        return mk_viewinfo<Tdata, $rank>();
-    }
 #pragma endregion
 
 #pragma region access
     /*!
      * access specified element
      */
-    template<class ...Tidx>
+    template<typename ...Tidx>
     __forceinline const Tdata& at(Tidx ...idx) const noexcept {
         static_assert($all_is<$int,Tidx...>,    "unexpect type");
-        static_assert(sizeof...(Tidx)==$rank,    "unexpect arguments count");
-        return data_[offsets_of(Tseq<$rank>{}, idx...)];
+        static_assert(sizeof...(Tidx)==$rank,   "unexpect arguments count");
+        return data_[_offset_of_dims($index_seq<$rank>, idx...)];
     }
 
     /*!
      * access specified element
      */
-    template<class ...Tidx>
+    template<typename ...Tidx>
     __forceinline Tdata& at(Tidx ...idx) noexcept {
         static_assert($all_is<$int, Tidx...>,  "unexpect type");
         static_assert(sizeof...(Tidx)==$rank,  "unexpect arguments count");
-        return data_[offsets_of(Tseq<$rank>{}, idx...)];
+        return data_[_offset_of_dims($index_seq<$rank>, idx...)];
     }
 
     /*!
@@ -164,7 +198,7 @@ struct View
      * @param idx indexs
      * @see at
      */
-    template<class ...I>
+    template<typename ...I>
     __forceinline Tdata& operator()(I ...idx) noexcept {
         return at(idx...);
     }
@@ -174,7 +208,7 @@ struct View
      * @param idx indexs
      * @see at
      */
-    template<class ...I>
+    template<typename ...I>
     __forceinline const Tdata& operator()(I ...idx) const noexcept {
         return at(idx...);
     }
@@ -183,11 +217,11 @@ struct View
 
 #pragma region slice
     /*! slice */
-    template<class ...Tidx, u32 ...Icnt, u32 Idim=Tcnt<(Icnt!=1)...>::$value>
+    template<typename ...Tidx, u32 ...Icnt, u32 Idim=Tcnt<(Icnt!=1)...>::$value>
     View<const Tdata, Idim> slice(const Tidx(&...ids)[Icnt]) const noexcept {
 #ifndef NMS_CC_INTELLISENSE
         auto tmp = _slice(Tseq<$rank>{}, ids...);
-        auto ret = tmp._select(Tindex<(Icnt!=1)...>{});
+        auto ret = tmp._select_dims(Tindex_if<(Icnt!=1)...>{});
         return ret;
 #else
         return {};
@@ -195,11 +229,11 @@ struct View
     }
 
     /*! slice */
-    template<class ...Tidx, u32 ...Icnt, u32 Idim=Tcnt<(Icnt!=1)...>::$value>
+    template<typename ...Tidx, u32 ...Icnt, u32 Idim=Tcnt<(Icnt!=1)...>::$value>
     View<Tdata, Idim> slice(const Tidx(&...ids)[Icnt]) noexcept {
 #ifndef NMS_CC_INTELLISENSE
-        auto tmp = _slice(Tseq<$rank>{}, ids...);
-        auto ret = tmp._select(Tindex<(Icnt!=1)...>{});
+        auto tmp = _slice(Tindex_seq<$rank>{}, ids...);
+        auto ret = tmp._select_dims(Tindex_if<(Icnt!=1)...>{});
         return ret;
 #else
         return {};
@@ -211,7 +245,7 @@ struct View
      * @param ids sections
      * @see slice
      */
-    template<class ...Tidx, u32 ...Icnt >
+    template<typename ...Tidx, u32 ...Icnt >
     auto operator()(const Tidx(&...ids)[Icnt]) const noexcept {
         return this->slice(ids...);
     }
@@ -221,7 +255,7 @@ struct View
      * @param ids sections
      * @see slice
      */
-    template<class ...Tidx, u32 ...Icnt >
+    template<typename ...Tidx, u32 ...Icnt >
     auto operator()(const Tidx(&...ids)[Icnt]) noexcept {
         return this->slice(ids...);
     }
@@ -234,7 +268,7 @@ struct View
         Tidxs   new_step;
 
         for (Trank i = 0; i < $rank; ++i) {
-            new_size[i] = this->size_[order[i]];
+            new_size[i] = this->dims_[order[i]];
             new_step[i] = this->step_[order[i]];
         }
 
@@ -253,82 +287,116 @@ struct View
 
 #pragma endregion
 
-#pragma region save/load
+#pragma region format
+    void sformat(IString& buf, const FormatStyle& style) const {
+        _sformat(buf, style, *this);
+    }
 #pragma endregion
 
 protected:
     Tdata*  data_;
-    Tdims   size_;
+    Tdims   dims_;
     Tidxs   step_;
 
 #pragma region index_of
-    template<u32 Idim, class Tidx>
-    __forceinline constexpr Tsize index_of(Tidx idx) const noexcept {
-        return idx >= 0 ? Tsize(idx) : size_[Idim] - Tsize(0 - idx);
+    template<u32 Idim, typename Tidx>
+    __forceinline constexpr Tsize _index_of_dim(Tidx idx) const noexcept {
+        return idx >= 0 ? Tsize(idx) : dims_[Idim] - Tsize(0 - idx);
     }
 #pragma endregion
 
-#pragma region offset_of
-    template<u32 Idim, class Tidx>
-    __forceinline constexpr Tstep offset_of(Tidx idx) const noexcept {
+#pragma region _offset_of_dim
+    template<u32 Idim, typename Tidx>
+    __forceinline constexpr Tstep _offset_of_dim(Tidx idx) const noexcept {
         return Tstep(idx) * step_[Idim];
     }
 
-    template<u32 ...Idim, class ...Tidx>
-    __forceinline constexpr Tstep offsets_of(Tu32<Idim...>, Tidx ...idx) const noexcept {
-        return sum(offset_of<Idim>(idx)...);
+    template<u32 ...Idim, typename ...Tidx>
+    __forceinline constexpr Tstep _offset_of_dims(Tu32<Idim...>, Tidx ...idx) const noexcept {
+        return sum(_offset_of_dim<Idim>(idx)...);
     }
 #pragma endregion
 
-#pragma region size_of
-    template<u32 Idim, class Tidx>
-    Tsize size_of(const Tidx(&)[1]) const noexcept {
+#pragma region dims_of
+    template<u32 Idim, typename Tidx>
+    Tsize _size_of_dim(const Tidx(&)[1]) const noexcept {
         return Tsize(1u);
     }
 
-    template<u32 Idim, class Tidx>
-    Tsize size_of(const Tidx(&idx)[2]) const noexcept {
-        const Tsize s0 = index_of<Idim>(idx[0]);
-        const Tsize s1 = index_of<Idim>(idx[1]);
+    template<u32 Idim, typename Tidx>
+    Tsize _size_of_dim(const Tidx(&idx)[2]) const noexcept {
+        const Tsize s0 = _index_of_dim<Idim>(idx[0]);
+        const Tsize s1 = _index_of_dim<Idim>(idx[1]);
         return s1 - s0 + 1;
     }
 #pragma endregion
 
 #pragma region _slice
     /* slice */
-    template<u32 ...Idim, class ...Tidx, u32 ...Icnt>
+    template<u32 ...Idim, typename ...Tidx, u32 ...Icnt>
     View<Tdata, $rank> _slice(Tu32<Idim...>, const Tidx(&...s)[Icnt]) noexcept {
         static_assert($all<(Icnt <= 2)...>, "unexpect array size");
-        return{ data_ + offsets_of(Tu32<Idim...>{}, s[0]...), {size_of<Idim>(s)...}, step_ };
+        return{ data_ + _offset_of_dims(Tu32<Idim...>{}, s[0]...), { _size_of_dim<Idim>(s)...}, step_.data };
     }
 
     /* slice */
-    template<u32 ...Idim, class ...Tidx, u32 ...Icnt>
+    template<u32 ...Idim, typename ...Tidx, u32 ...Icnt>
     View<const Tdata, $rank> _slice(Tu32<Idim...>, const Tidx(&...s)[Icnt]) const noexcept {
         static_assert($all<(Icnt <= 2)...>, "unexpect array size");
-        return { data_ + offsets_of(Tu32<Idim...>{}, s[0]...), {size_of<Idim>(s)...}, step_ };
+        return { data_ + _offset_of_dims(Tu32<Idim...>{}, s[0]...), { _size_of_dim<Idim>(s)...}, step_.data };
     }
 
     /* select dim */
     template<u32 ...I>
-    auto _select(Tu32<I...>) const noexcept {
-        return View<Tdata, u32(sizeof...(I))>{ data_, { size_[I]... }, { step_[I]... } };
+    auto _select_dims(Tu32<I...>) const noexcept {
+        return View<Tdata, u32(sizeof...(I))>{ data_, { dims_[I]... }, { step_[I]... } };
     }
 #pragma endregion
 
+
 private:
-    template<class Tdims>
-    static constexpr Tidxs mkstep(const Tdims& size) noexcept {
-        return mkstep(Tseq<$rank>{}, size);
+    static constexpr Tidxs _make_step_from_size(const Tsize(&size)[$rank]) noexcept {
+        return _make_step_from_dims_seq($index_seq<$rank>, size);
     }
 
-    template<u32 ...Idim, class Tdims>
-    static constexpr Tidxs mkstep(Tu32<Idim...>, const Tdims& size) noexcept {
-        return { Tstep(iprod(Tseq<Idim>{}, size))... };
+    template<u32 ...Idim>
+    static constexpr Tidxs _make_step_from_dims_seq(Tu32<Idim...>, const Tsize(&size)[$rank]) noexcept {
+        return { Tstep(iprod($index_seq<Idim>, size))... };
+    }
+
+    template<typename Tbuff, typename Tstyle>
+    static void _sformat(Tbuff& outbuf, const Tstyle& style, const View<Tdata, 1>& view) {
+        const auto view_dims = view.dims;
+
+        outbuf += "\n";
+        for (Tsize nx = 0; nx < view_dims[0]; nx++) {
+            nms::sformat(outbuf, FormatStyle{ '>', 0, 3, 0 }, nx);
+            outbuf += "| ";
+            const auto& val = view(nx);
+            nms::sformat(outbuf, style, val);
+            outbuf += "\n";
+        }
+    }
+
+    template<typename Tbuff, typename Tstyle>
+    static void _sformat(Tbuff& outbuf, const Tstyle& style, const View<Tdata, 2>& view) {
+        const auto view_dims = view.dims;
+
+        outbuf += "\n";
+        for (Tsize nx = 0; nx < view_dims[0]; nx++) {
+            nms::sformat(outbuf, FormatStyle{ '>', 0, 3, 0 }, nx);
+            outbuf += "| ";
+            for (Tsize ny = 0; ny < view_dims[1]; ny++) {
+                const auto& val = view(nx, ny);
+                nms::sformat(outbuf, style, val);
+                if (ny + 1 != view_dims[1]) outbuf += ", ";
+            }
+            outbuf += "\n";
+        }
     }
 };
 
-template<class T>
+template<typename T>
 struct View<T, 0>
 {
 #pragma region defines
@@ -339,9 +407,16 @@ struct View<T, 0>
     using Tsize = u32;
     using Tstep = i32;
     using Tinfo = ViewInfo;
-    using Tdims = Vec<Tsize, $rank>;
 
-    template<class U, u32 M>
+    /*! type-info */
+    constexpr static Tinfo $info ={
+        '$',
+        $is<$uint, T> ? 'u' : $is<$sint, T> ? 'i' : $is<$float, T> ? 'f' : '?',
+        char('0' + sizeof(T)),
+        char('0' + 0)
+    };
+
+    template<typename U, u32 M>
     friend struct View;
 #pragma endregion
 
@@ -360,11 +435,6 @@ struct View<T, 0>
         : data_{ data }, size_{ size }, capacity_{0}
     {}
 
-    /*! construct view with data, size */
-    __forceinline constexpr View(Tdata* data, const Tsize(&size)[$rank]) noexcept
-        : data_{ data }, size_{ size[0] }, capacity_{0}
-    {}
-
     /*! construct view with array */
     template<u32 Isize>
     __forceinline constexpr View(Tdata(&data)[Isize]) noexcept
@@ -374,79 +444,68 @@ struct View<T, 0>
 #pragma endregion
 
 #pragma region properties
-    __forceinline static constexpr auto rank() noexcept {
-        return $rank;
-    }
+    /*! data pointer */
+    __declspec(property(get=get_data)) Tdata* data;
 
-    /*! get data pointer */
-    __forceinline Tdata* data() noexcept {
+    __forceinline Tdata* get_data() noexcept {
         return data_;
     }
 
-    /*! get data pointer */
-    __forceinline constexpr const Tdata* data() const noexcept {
+    __forceinline constexpr const Tdata* get_data() const noexcept {
         return data_;
     }
 
     /*! get n-dim size */
-    __forceinline constexpr Tdims size() const noexcept {
-        return { size_ };
-    }
+    __declspec(property(get=get_size)) Tsize size;
 
-    /*! get total elements count */
-    __forceinline constexpr Tsize count() const noexcept {
+    __forceinline constexpr Tsize get_size() const noexcept {
         return size_;
     }
 
+    /*! get total elements count */
+    __declspec(property(get=get_size)) Tsize count;
+
     /*! get capicity */
-    __forceinline constexpr Tsize capacity() const noexcept {
+    __declspec(property(get=get_capacity)) Tsize capacity;
+
+    __forceinline constexpr Tsize get_capacity() const noexcept {
         return capacity_;
-    }
-
-    /*! test if empty (count()==0) */
-    __forceinline constexpr bool isEmpty() const {
-        return count() == 0;
-    }
-
-    /*! get type-info */
-    constexpr static Tinfo info() {
-        return mk_viewinfo<Tdata, $rank>();
     }
 #pragma endregion
 
 #pragma region access
     /*! access specified element */
-    template<class Tidx>
+    template<typename Tidx>
     __forceinline const Tdata& at(Tidx idx) const noexcept {
         return data_[idx];
     }
 
     /*! access specified element */
-    template<class Tidx>
+    template<typename Tidx>
     __forceinline Tdata& at(Tidx idx) noexcept {
         return data_[idx];
     }
 
     /*! access specified element */
-    template<class Tidx>
+    template<typename Tidx>
     __forceinline auto& operator()(Tidx idx) noexcept {
         return at(idx);
     }
 
     /*! access specified element */
-    template<class Tidx>
+    template<typename Tidx>
     __forceinline auto& operator()(Tidx idx) const noexcept {
         return at(idx);
     }
 
     /*! access specified element */
-    template<class Tidx>
+    template<typename Tidx>
     __forceinline auto& operator[](Tidx idx) noexcept {
         return at(idx);
     }
 
     /*! access specified element */
-    template<class Tidx>
+    template<typename Tidx>
     __forceinline auto& operator[](Tidx idx) const noexcept {
         return at(idx);
     }
@@ -476,14 +535,14 @@ struct View<T, 0>
     }
 
     /*! contains */
-    template<class U>
+    template<typename U>
     bool contains(const U& val) const {
         const auto idx = find(val);
         return idx != end();
     }
 
     /*! find */
-    template<class U>
+    template<typename U>
     Titr find(const U& val) {
         for (auto itr = begin(); itr != end(); ++itr) {
             if (*itr == val) {
@@ -494,7 +553,7 @@ struct View<T, 0>
     }
 
     /*! find */
-    template<class U>
+    template<typename U>
     Kitr find(const U& val) const {
         for (auto itr = begin(); itr != end(); ++itr) {
             if (*itr == val) {
@@ -505,7 +564,7 @@ struct View<T, 0>
     }
 
     /*! replace */
-    template<class Tsrc, class Tdst>
+    template<typename Tsrc, typename Tdst>
     void replace(const Tsrc& src, Tdst&& dst) {
         for (auto& element: *this) {
             if (element == src) {
@@ -518,25 +577,25 @@ struct View<T, 0>
 
 #pragma region slice
     /*! slice */
-    template<class Tidx>
+    template<typename Tidx>
     View<Tdata> slice(Tidx first, Tidx last) noexcept {
-        return { data_ + index_of(first), size_of(first, last) };
+        return { data_ + index_of(first), _size_of_dim(first, last) };
     }
 
     /*! slice */
-    template<class Tidx>
+    template<typename Tidx>
     View<const Tdata> slice(Tidx first, Tidx last) const noexcept {
-        return { data_ + index_of(first), size_of(first, last) };
+        return { data_ + index_of(first), _size_of_dim(first, last) };
     }
 
     /*! slice */
-    template<class Tidx>
+    template<typename Tidx>
     View<Tdata> operator()(Tidx first, Tidx last) noexcept {
         return slice(first, last);
     }
 
     /*! slice */
-    template<class Tidx>
+    template<typename Tidx>
     View<const Tdata> operator()(Tidx first, Tidx last) const noexcept {
         return slice(first, last);
     }
@@ -550,8 +609,8 @@ struct View<T, 0>
             return 0;
         }
 
-        const auto na = a.count();
-        const auto nb = b.count();
+        const auto na = a.count;
+        const auto nb = b.count;
 
         if (na != nb) {
             return na > nb ? +1 : -1;
@@ -575,72 +634,42 @@ struct View<T, 0>
 
 #pragma endregion
 
+#pragma region format
+    void sformat(IString& buf, const FormatStyle& style) const {
+        _sformat(buf, style);
+    }
+#pragma endregion
+
 protected:
     Tdata*  data_;
     Tsize   size_;
     Tsize   capacity_;
 
-    template<class Tidx>
+    template<typename Tidx>
     Tsize index_of(Tidx idx) const {
         return idx >= 0 ? Tsize(idx) : size_ - Tsize(0-idx);
     }
 
-    template<class Tidx>
-    Tsize size_of(Tidx i0 , Tidx i1) const {
+    template<typename Tidx>
+    Tsize _size_of_dim(Tidx i0 , Tidx i1) const {
         const auto s0 = index_of(i0);
         const auto s1 = index_of(i1);
         return s1 - s0 + 1;
     }
+
+    template<typename Tbuff, typename Tstyle>
+    void _sformat(Tbuff& outbuf, const Tstyle& style) const {
+        outbuf += '[';
+
+        for (Tsize i = 0u; i < this->size_; ++i) {
+            nms::sformat(outbuf, style, data_[i]);
+            if (i + 1 != this->size_) {
+                outbuf += ", ";
+            }
+        }
+
+        outbuf += ']';
+    }
 };
-
-template<class T>
-struct Scalar
-{
-    using Trank = u32;
-    using Tsize = u32;
-    using Tdata = T;
-    using Tview = Scalar;
-
-    constexpr static const auto $rank = 0;
-
-    Scalar(const T& t)
-        : t_(t) {
-    }
-
-    template<class I>
-    Tsize size(I /*idx*/) const noexcept {
-        return 1u;
-    }
-
-    template<class ...I>
-    const T& operator()(I .../*idx*/) const noexcept {
-        return t_;
-    }
-
-    template<class ...I>
-    T& operator()(I .../*idx*/) noexcept {
-        return t_;
-    }
-protected:
-    T   t_;
-};
-
-#pragma region make
-template<class T, u32 N>
-View<T, N> mkView(T* ptr, const u32(&size)[N], const u32(&step)[N]) {
-    return { ptr, size, step };
-}
-
-template<class T, u32 N>
-View<T, N> mkView(T* ptr, const u32(&size)[N]) {
-    return { ptr, size };
-}
-
-template<class T, u32 S>
-View<T> mkView(T(&data)[S]) {
-    return {data};
-}
-
-#pragma endregion
 
 }
