@@ -10,14 +10,14 @@ using arr_t = CUarray_st*;
 /**
  * cuda runtime exception
  */
-class Exception: public IException
+class Exception: public Iexception
 {
   public:
     explicit Exception(u32 id)
         :id_(id)
     {}
 
-    void format(IString& buf) const override;
+    void sformat(IString& buf) const override;
 
   protected:
     u32 id_;
@@ -112,7 +112,7 @@ public:
     using   fun_t = CUfunc_st*;
 
     NMS_API ~Module();
-    NMS_API explicit Module(StrView ptx_src);
+    NMS_API explicit Module(str ptx_src);
 
     /* invoke kernel */
     template<class ...Targ>
@@ -121,10 +121,10 @@ public:
         run_kernel(kernel, rank, dims, argv);
     }
 
-    NMS_API sym_t   get_symbol(StrView name) const;
+    NMS_API sym_t   get_symbol(str name) const;
     NMS_API void    set_symbol(sym_t   symbol, const void* value, u32 size) const;
 
-    NMS_API fun_t   get_kernel(StrView name) const;
+    NMS_API fun_t   get_kernel(str name) const;
     NMS_API void    run_kernel(fun_t   func, u32 rank, const u32 dims[], const void* argv[], Stream& stream=Stream::global()) const;
 
 protected:

@@ -5,57 +5,59 @@ namespace nms::serialization
 {
 
 #pragma region format:json
-NMS_API void XDOM::_format_json(IString& buf, u32 level) const {
+NMS_API void DOM::_format_json(IString& buf, u32 level) const {
     static const auto $indent = 4;
 
-    auto& v = val();
+    auto& v = this->node;
 
-    switch (v.type()) {
-    case Type::null:    nms::_format(buf, {}, "");              break;
-    case Type::boolean: nms::_format(buf, {}, v.bool_val_);     break;
-    case Type::u8:      nms::_format(buf, {}, v.u8_val_);       break;
-    case Type::i8:      nms::_format(buf, {}, v.i8_val_);       break;
-    case Type::u16:     nms::_format(buf, {}, v.u16_val_);      break;
-    case Type::i16:     nms::_format(buf, {}, v.i16_val_);      break;
-    case Type::u32:     nms::_format(buf, {}, v.u32_val_);      break;
-    case Type::i32:     nms::_format(buf, {}, v.i32_val_);      break;
-    case Type::u64:     nms::_format(buf, {}, v.u64_val_);      break;
-    case Type::i64:     nms::_format(buf, {}, v.i64_val_);      break;
-    case Type::f32:     nms::_format(buf, {}, v.f32_val_);      break;
-    case Type::f64:     nms::_format(buf, {}, v.f64_val_);      break;
+    switch (v.type) {
+    case Type::$null:   nms::_sformat_val(buf, {}, "");         break;
+    case Type::$bool:   nms::_sformat_val(buf, {}, v.$bool);    break;
+    case Type::$u8:     nms::_sformat_val(buf, {}, v.$u8);      break;
+    case Type::$i8:     nms::_sformat_val(buf, {}, v.$i8);      break;
+    case Type::$u16:    nms::_sformat_val(buf, {}, v.$u16);     break;
+    case Type::$i16:    nms::_sformat_val(buf, {}, v.$i16);     break;
+    case Type::$u32:    nms::_sformat_val(buf, {}, v.$u32);     break;
+    case Type::$i32:    nms::_sformat_val(buf, {}, v.$i32);     break;
+    case Type::$u64:    nms::_sformat_val(buf, {}, v.$u64);     break;
+    case Type::$i64:    nms::_sformat_val(buf, {}, v.$i64);     break;
+    case Type::$f32:    nms::_sformat_val(buf, {}, v.$f32);     break;
+    case Type::$f64:    nms::_sformat_val(buf, {}, v.$f64);     break;
 
-    case Type::datetime: {
+    case Type::$time: {
         buf += "\"";
-        DateTime(v.i64_val_).format(buf, {});
-        buf += "\"";
-        break;
-    }
-    case Type::number: {
-        nms::_format(buf, {}, v.str());
-        break;
-    }
-
-    case Type::key: case Type::string: {
-        buf += "\"";
-        nms::_format(buf, {}, v.str());
+        time::from_stamp(v.$time).sformat(buf, {});
         buf += "\"";
         break;
     }
+    case Type::$num: {
+        nms::_sformat_val(buf, {}, v.text);
+        break;
+    }
 
-    case Type::array: {
+    case Type::$key: case Type::$str: {
+        buf += "\"";
+        nms::_sformat_val(buf, {}, v.text);
+        buf += "\"";
+        break;
+    }
+
+    case Type::$array: {
         buf += "[\n";
 
         for (auto itr = begin(); itr != end(); ) {
             buf.appends((level+1)*$indent, ' ');
             (*itr)._format_json(buf, level + 1);
-            _format(buf, {}, (++itr == end()) ? StrView{ "\n" } : StrView{ ",\n" });
+
+            ++itr;
+            (itr == end()) ? buf += "\n" : buf += ",\n";
         }
 
         buf.appends(level * $indent, ' ');
         buf += "]";
         break;
     }
-    case Type::object: {
+    case Type::$object: {
         buf += "{\n";
 
         for (auto itr = begin(); itr != end();) {
@@ -64,7 +66,9 @@ NMS_API void XDOM::_format_json(IString& buf, u32 level) const {
             buf += itr.key();
             buf += "\": ";
             (*itr)._format_json(buf, level + 1);
-            _format(buf, {}, (++itr == end()) ? StrView{ "\n" } : StrView{ ",\n" });
+            ++itr;
+
+            (itr == end()) ? str{ "\n" } : str{ ",\n" };
         }
         buf.appends(level * $indent, ' ');
         buf += "}";
@@ -78,8 +82,8 @@ NMS_API void XDOM::_format_json(IString& buf, u32 level) const {
 
 #pragma region parse:json
 // parse
-static bool expect(const StrView& expect, const StrView& text) {
-    for (u32 i = 1; i < expect.count(); ++i) {
+static bool expect(const str& expect, const str& text) {
+    for (u32 i = 1; i < expect.count; ++i) {
         if (expect[i] != text[i]) {
             return false;
         }
@@ -93,45 +97,45 @@ static bool isBlank(char c) {
     return false;
 }
 
-static char peekChar(StrView& text) {
+static char peekChar(str& text) {
     u32 pos = 0;
-    u32 len = u32(text.count());
+    u32 len = u32(text.count);
     while (pos < len && isBlank(text[pos])) pos++;
 
     auto c = text[pos];
-    text = text.slice(pos, u32(text.count() - 1));
+    text = text.slice(pos, u32(text.count - 1));
     return c;
 }
 
-static char parseChar(StrView& text) {
+static char parseChar(str& text) {
     auto c = peekChar(text);
-    text=text.slice(1u, u32(text.count()) - 1);
+    text=text.slice(1u, u32(text.count) - 1);
     return c;
 }
 
-static i32 parseAny(StrView& text, XDOM* nodes, i32 proot, i32 pleft);
+static i32 parseAny(str& text, DOM* nodes, i32 proot, i32 pleft);
 
-static i32 parseNum(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
+static i32 parseNum(str& text, DOM* nodes, i32 proot, i32 pleft) {
     // 0123456789,
     // ^         ^
     // s         p
-    auto s = text.data();
+    auto s = text.data;
     auto p = s;
     while (*p != ',' && *p != '}' && *p != ']' && *p != '\n') {
         ++p;
     }
 
-    auto ret = nodes->add(proot, pleft, DOM(StrView{ s, u32(p - s) }, Type::number));
-    text     = StrView{ p, u32(text.count() - 1) };
+    auto ret = nodes->add(proot, pleft, Node::from_num(str{ s, u32(p - s) }));
+    text     = str{ p, u32(text.count - 1) };
     return ret;
 }
 
-static i32 parseStr(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
+static i32 parseStr(str& text, DOM* nodes, i32 proot, i32 pleft) {
     // "abcdefg"
     // ^ ......^
     // b       e
-    auto ptr    = text.data();
-    auto pos    = text.data() + 1;
+    auto ptr    = text.data;
+    auto pos    = text.data + 1;
 
     while (true) {
         auto c = *pos;
@@ -149,12 +153,12 @@ static i32 parseStr(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
 
     const auto b = 0;
     const auto e = u32(pos - ptr);
-    const auto ret = nodes->add(proot, pleft, DOM(StrView{ text.data() + b + 1, e - b - 1 }, Type::string));
-    text = text.slice(e + 1, u32(text.count()) - 1);
+    const auto ret = nodes->add(proot, pleft, Node::from_str({ text.data + b + 1, e - b - 1 }));
+    text = text.slice(e + 1, u32(text.count) - 1);
     return ret;
 }
 
-static i32 parseKey(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
+static i32 parseKey(str& text, DOM* nodes, i32 proot, i32 pleft) {
     // "abcdefg"
     // ^ ......^
     // b       e
@@ -162,15 +166,15 @@ static i32 parseKey(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
     u32 b = 0;
     u32 e = 1;
     while (text[e] != '"' && text[e - 1] != '\\') ++e;
-    auto ret = nodes->add(proot, pleft, DOM(StrView{ text.data() + b + 1,  e - b - 1 }, Type::key));
-    text = text.slice(e + 1, u32(text.count()) - 1);
+    auto ret = nodes->add(proot, pleft, Node::from_key({ text.data + b + 1,  e - b - 1 }));
+    text = text.slice(e + 1, u32(text.count) - 1);
     return ret;
 }
 
-static i32 parseArray(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
-    auto parr = nodes->add(proot, pleft, DOM(Type::array));
+static i32 parseArray(str& text, DOM* nodes, i32 proot, i32 pleft) {
+    auto parr = nodes->add(proot, pleft, Node::make_array());
 
-    text = text.slice(1u, u32(text.count()) - 1);
+    text = text.slice(1u, u32(text.count) - 1);
     if (peekChar(text) == ']') {
         parseChar(text);
         return parr;
@@ -192,9 +196,9 @@ static i32 parseArray(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
     }
 }
 
-static i32 parseObject(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
+static i32 parseObject(str& text, DOM* nodes, i32 proot, i32 pleft) {
     // add new node
-    auto pobj = nodes->add(proot, pleft, DOM(Type::object));
+    auto pobj = nodes->add(proot, pleft, Node::make_object());
 
     text = text.slice(1, -1);
     if (peekChar(text) == '}') {
@@ -236,10 +240,10 @@ static i32 parseObject(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
     return pobj;
 }
 
-static i32 parseAny(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
+static i32 parseAny(str& text, DOM* nodes, i32 proot, i32 pleft) {
     auto result = -1;
 
-    const auto text_len    = text.count();
+    const auto text_len    = text.count;
 
     // peek next char
     const auto next_char = peekChar(text);
@@ -250,7 +254,7 @@ static i32 parseAny(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
     {
         if (expect("null", text)) {
             text    = text.slice(4u, text_len - 1);
-            result  = nodes->add(proot, pleft, DOM{ Type::null });
+            result  = nodes->add(proot, pleft, Node::make_null() );
         }
         break;
     }
@@ -258,7 +262,7 @@ static i32 parseAny(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
     {
         if (expect("true", text)) {
             text    = text.slice(4u, text_len - 1);
-            result  = nodes->add(proot, pleft, DOM{ true });
+            result  = nodes->add(proot, pleft, Node::from_bool(true));
         }
         break;
     }
@@ -266,7 +270,7 @@ static i32 parseAny(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
     {
         if (expect("false", text)) {
             text    = text.slice(5u, text_len - 1);
-            result  = nodes->add(proot, pleft, DOM{ false });
+            result  = nodes->add(proot, pleft, Node::from_bool(false));
         }
         break;
     }
@@ -314,7 +318,7 @@ static i32 parseAny(StrView& text, XDOM* nodes, i32 proot, i32 pleft) {
 }
 
 // wraper
-NMS_API void XDOM::_parse_json(const StrView& text) {
+NMS_API void DOM::_parse_json(const str& text) {
     auto str = text;
     parseAny(str, this, -1, -1);
 }
@@ -324,14 +328,12 @@ NMS_API void XDOM::_parse_json(const StrView& text) {
 #pragma region unittest
 
 struct TestObject
-    : public IFormatable
-    , public ISerializable
 {
-    NMS_PROPERTY_BEGIN;
-    typedef String<32>    NMS_PROPERTY(a);
-    typedef f32x4         NMS_PROPERTY(b);
-    typedef DateTime      NMS_PROPERTY(c);
-    NMS_PROPERTY_END;
+    NMS_REFLECT_BEGIN;
+    typedef String<32>    NMS_MEMBER(a);
+    typedef f32x4         NMS_MEMBER(b);
+    typedef DateTime      NMS_MEMBER(c);
+    NMS_REFLECT_END;
 };
 
 nms_test(json_serialize) {
@@ -340,11 +342,10 @@ nms_test(json_serialize) {
     obj.b ={ 1.1f, +2.2f, -3.3f, 4.4e2f };
     obj.c = DateTime(2017, 9, 3, 8, 30, 12);
 
-    Tree<64> node;
-    node << obj;
+    auto tree = Tree<64>::from_object(obj);
 
     io::log::info("obj  = {}", obj);
-    io::log::info("json = {:json}", node);
+    io::log::info("json = {:json}", tree);
 }
 
 nms_test(json_deserialize) {
@@ -356,11 +357,10 @@ nms_test(json_deserialize) {
 }
 )";
     // json_str -> json_tree
-    auto dom = Tree<32>(text, $json);
+    auto dom = Tree<32>::from_json(text);
 
     TestObject val;
-    dom >> val;
-
+    dom.deserialize(val);
     io::log::debug("obj = {}", val);
 }
 

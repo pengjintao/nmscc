@@ -40,13 +40,7 @@ NMS_API bool _init() {
     return has_init;
 }
 
-/*! console string buffer */
-NMS_API IString& _gStrBuff() {
-    static thread_local U8String<4*1024*1024> str;   // 4MB
-    return str;
-}
-
-NMS_API void writes(const StrView text[], u32 n) {
+NMS_API void writes(const str text[], u32 n) {
     static auto init = _init();
     (void)init;
 
@@ -54,19 +48,20 @@ NMS_API void writes(const StrView text[], u32 n) {
         return;
     }
     else if (n == 1) {
-        if (text[0].count() > 0) {
-            ::write(STDOUT_FILENO, text[0].data(), text[0].count());
+        if (text[0].count > 0) {
+            ::write(STDOUT_FILENO, text[0].data, text[0].count);
         }
     }
     else {
-        static thread_local U8String<128 * 1024> buff;
-        buff._resize(0);
+        static thread_local U8String<4 *1024 * 1024> tls_buff;  // 4MB
+        tls_buff._resize(0u);
+
         for (u32 i = 0; i < n; ++i) {
-            buff += text[i];
+            tls_buff += text[i];
         }
 
-        if (buff.count() > 0) {
-            ::write(STDOUT_FILENO, buff.data(), buff.count());
+        if (tls_buff.count > 0) {
+            ::write(STDOUT_FILENO, tls_buff.data, tls_buff.count);
         }
     }
 }
@@ -86,7 +81,7 @@ NMS_API void goto_line(i32 line) {
         ? ::snprintf(cmd_buf, sizeof(cmd_buf), "\033[%dE", +line)
         : ::snprintf(cmd_buf, sizeof(cmd_buf), "\033[%dF", -line);
 
-    StrView cmd_str = { cmd_buf, u32(cmd_len)};
+    str cmd_str = { cmd_buf, u32(cmd_len)};
     write(cmd_str);
 }
 
@@ -107,8 +102,8 @@ NMS_API void show_cursor(bool value) {
     }
     cond = value;
 
-    static const StrView cmd_show = "\033[?25h";
-    static const StrView cmd_hide = "\033[?25l";
+    static const str cmd_show = "\033[?25h";
+    static const str cmd_hide = "\033[?25l";
     write(cond ? cmd_show : cmd_hide);
 }
 
@@ -116,16 +111,17 @@ NMS_API void hide_cursor(bool value) {
     show_cursor(!value);
 }
 
-NMS_API void progress_bar(f64 percent, const View<const StrView>& digits, const View<const StrView>& circles, const StrView& color) {
+NMS_API void progress_bar(f64 percent, const View<const str>& digits, const View<const str>& circles, const str& color) {
     if (!isterm()) {
         return;
     }
 
-    static const auto prog_cnt = columns() - 20;
-    const auto prog_pos = (percent+0.001)*prog_cnt;
-    const auto prog_idx = u32(prog_pos);
+    static const auto bar_len = columns() - 20;
 
-    if (prog_idx < prog_cnt) {
+    const auto bar_pos = (percent+0.001)*bar_len;
+    const auto bar_idx = u32(bar_pos);
+
+    if (bar_idx < bar_len) {
         // hide cursor
         show_cursor(false);
     }
@@ -136,49 +132,53 @@ NMS_API void progress_bar(f64 percent, const View<const StrView>& digits, const 
 
     U8String<1024> prog_bar;
 
-    if (color.count()!=0) {
+    if (color.count!=0) {
         prog_bar += color;
     }
 
     prog_bar += "\033[512D";
-    for (auto i = 0u; i < prog_idx; ++i) {
-        prog_bar +=digits[digits.count() - 1];
+    for (auto i = 0u; i < bar_idx; ++i) {
+        prog_bar +=digits[digits.count - 1];
     }
 
-    if (prog_idx < prog_cnt) {
-        const auto digits_idx = u32((prog_pos - prog_idx)*digits.count());
+    if (bar_idx < bar_len) {
+        const auto digits_idx = u32((bar_pos - bar_idx)*digits.count);
         prog_bar +=digits[digits_idx];
     }
 
-    for (auto i = prog_idx+1; i < prog_cnt; ++i) {
+    for (auto i = bar_idx+1; i < bar_len; ++i) {
         prog_bar += digits[0];
     }
 
-    if (color.count()!=0) {
+    if (color.count!=0) {
         prog_bar += $rst;
     }
 
 
-    if (circles.count() != 0) {
+    if (circles.count != 0) {
         static thread_local auto circles_idx = 0u;
-        circles_idx = (circles_idx+1)%circles.count();
+        circles_idx = (circles_idx+1)%circles.count;
+
+        if (bar_idx == bar_len) {
+            circles_idx = 0;
+        }
 
         prog_bar += ' ';
         prog_bar += circles[circles_idx];
         prog_bar += ' ';
     }
 
-    sformat(prog_bar, " {:.2}%", percent*100.0);
+    sformat(prog_bar, " {.2}%", percent*100.0);
     write(prog_bar);
 }
 
-NMS_API StrView unicode_blocks[] = { u8"░", u8"▏", u8"▎", u8"▍", u8"▌", u8"▋", u8"▊", u8"▉", u8"█"};
-NMS_API StrView unicode_clocks[] = { u8"🕛", u8"🕐", u8"🕑", u8"🕒", u8"🕓", u8"🕔", u8"🕕", u8"🕖", u8"🕗", u8"🕘", u8"🕙", u8"🕚" };
+NMS_API str unicode_blocks[] = { u8"░", u8"▏", u8"▎", u8"▍", u8"▌", u8"▋", u8"▊", u8"▉", u8"█"};
+NMS_API str unicode_clocks[] = { u8"🕛", u8"🕐", u8"🕑", u8"🕒", u8"🕓", u8"🕔", u8"🕕", u8"🕖", u8"🕗", u8"🕘", u8"🕙", u8"🕚" };
 
-NMS_API StrView ascii_blocks[]   = { " ", "-", "="};
-NMS_API StrView ascii_clocks[]   ={ "-", "/", "|", "\\" };
+NMS_API str ascii_blocks[]   = { " ", "-", "="};
+NMS_API str ascii_clocks[]   = { "-", "/", "|", "\\" };
 
-NMS_API void progress_bar(f64 percent, const StrView& color) {
+NMS_API void progress_bar(f64 percent, const str& color) {
 #ifdef NMS_OS_UNIX
     progress_bar(percent, unicode_blocks, unicode_clocks, color);
 #else

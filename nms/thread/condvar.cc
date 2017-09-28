@@ -63,23 +63,23 @@ namespace nms::thread
 {
 
 NMS_API int CondVar::init() {
-    return cnd_init(&impl_);
+    return cnd_init(&_thrd);
 }
 
 NMS_API int CondVar::destroy() {
-    return cnd_destroy(&impl_);
+    return cnd_destroy(&_thrd);
 }
 
 NMS_API int CondVar::signal() noexcept {
-    return cnd_signal(&impl_);
+    return cnd_signal(&_thrd);
 }
 
 NMS_API int CondVar::broadcast() noexcept {
-    return cnd_brodcast(&impl_);
+    return cnd_brodcast(&_thrd);
 }
 
 NMS_API int CondVar::wait(Mutex& mutex) {
-    return cnd_wait(&impl_, &mutex.impl_);
+    return cnd_wait(&_thrd, &mutex._thrd);
 }
 
 }

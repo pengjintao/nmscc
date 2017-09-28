@@ -1,6 +1,5 @@
 #pragma once
 
-#include <nms/core/type.h>
 #include <nms/core/trait.h>
 #include <nms/core/exception.h>
 
@@ -19,8 +18,17 @@ NMS_API void  _adel(void* dat);
 
 NMS_API u64   msize(const void* ptr);
 
-class EBadAlloc : public IException
-{};
+struct Ebadalloc : public Iexception
+{
+    u64 size;
+
+    Ebadalloc(u64 size): size(size)
+    {}
+
+    void sformat(IString& outbuf) const {
+        nms::sformat(outbuf, "cannot alloc with size=`{}`", size);
+    }
+};
 
 /* allocation */
 template<class T>

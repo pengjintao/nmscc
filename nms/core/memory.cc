@@ -102,7 +102,7 @@ NMS_API void* _mnew(u64 size) {
         auto msize = size + 16;
         auto addr = static_cast<char*>(::malloc(msize));
         if (addr == nullptr) {
-            NMS_THROW(EBadAlloc{});
+            NMS_THROW(Ebadalloc{size});
         }
 
         for (auto i = 0u; i < 8; ++i) {
@@ -117,7 +117,7 @@ NMS_API void* _mnew(u64 size) {
     else {
         auto ptr = static_cast<void*>(::malloc(size));
         if (ptr == nullptr) {
-            NMS_THROW(EBadAlloc{});
+            NMS_THROW(Ebadalloc{size});
         }
         return ptr;
     }

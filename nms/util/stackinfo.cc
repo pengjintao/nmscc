@@ -42,7 +42,7 @@ static auto getCurrentProcess() {
     return proc;
 }
 
-static auto gDbgHelpLibrary(StrView name) {
+static auto gDbgHelpLibrary(str name) {
     static Library dbghelp_lib("DbgHelp.dll");
     auto func = dbghelp_lib[name];
     return func;
@@ -73,15 +73,15 @@ static auto dladdr(void* handle, Dl_info* info) {
 namespace nms
 {
 
-NMS_API void StackInfo::init() {
-    auto cnt = nms::numel(stacks_);
-    auto ret = backtrace(stacks_, i32(cnt));
-    count_ = u32(ret);
+NMS_API void StackInfo::_backtrace() {
+    const auto cnt = this->$capacity;
+    const auto ret = ::backtrace(_stacks, i32(cnt));
+    this->_count   = u32(ret);
 }
 
-NMS_API void StackInfo::Frame::format(IString& buff) const {
-    if (ptr == nullptr) {
-        buff += StrView("<null>");
+NMS_API void StackInfo::Frame::sformat(IString& buff) const {
+    if (this->ptr == nullptr) {
+        buff += str("<null>");
         return;
     }
 
@@ -90,12 +90,12 @@ NMS_API void StackInfo::Frame::format(IString& buff) const {
         char    buff[512];
     } info_ext;
 
-    auto ret = dladdr(ptr, &info_ext.info);
+    const auto ret = dladdr(this->ptr, &info_ext.info);
     if (ret == 0) {
-        buff += StrView("<unknow>");
+        buff += str("<unknow>");
         return;
     }
-    auto name = StrView{ info_ext.info.dli_sname, u32(strlen(info_ext.info.dli_sname)) };
+    const auto name = str{ info_ext.info.dli_sname, u32(strlen(info_ext.info.dli_sname)) };
 
 #ifdef NMS_CC_MSVC
     buff += name;
@@ -106,36 +106,36 @@ NMS_API void StackInfo::Frame::format(IString& buff) const {
     auto cxx_buff = abi::__cxa_demangle(name.data(), out_name, &length, &status);
 
     if (status == 0) {
-        buff += StrView{ cxx_buff, strlen(cxx_buff) };
+        buff += str{ cxx_buff, strlen(cxx_buff) };
 
         if (cxx_buff != out_name) {
             ::free(cxx_buff);
         }
     }
     else if (cxx_buff != nullptr) {
-        buff += StrView{ cxx_buff, strlen(cxx_buff) };
+        buff += str{ cxx_buff, strlen(cxx_buff) };
     }
     else {
-        buff += StrView("<empty>");
+        buff += str("<empty>");
     }
 #endif
 }
 
-NMS_API void StackInfo::format(IString& buff) const {
-    auto cnt = count();
+NMS_API void StackInfo::sformat(IString& buff) const {
+    const auto cnt = this->count;
 
     for (u32 i = 0; i < cnt; ++i) {
-        auto stack = (*this)[i];
+        const auto stack = (*this)[i];
         i + 1 < cnt
-            ? sformat(buff, "\t\033(0tq\033(B{:2}: {}\n", i, stack)
-            : sformat(buff, "\t\033(0mq\033(B{:2}: {}\n", i, stack);
+            ? nms::sformat(buff, "\t\033(0tq\033(B{:2}: {}\n", i, stack)
+            : nms::sformat(buff, "\t\033(0mq\033(B{:2}: {}\n", i, stack);
     }
 }
 
 #pragma region unittest
 nms_test(stacktrace) {
-    StackInfo stacks;
-    io::log::info("stacks = \n{}", stacks);
+    auto stack_info = StackInfo::backtrace();
+    io::log::info("stacks = \n{}", stack_info);
 }
 #pragma endregion
 

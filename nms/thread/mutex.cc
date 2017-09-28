@@ -64,7 +64,7 @@ namespace nms::thread
 {
 
 NMS_API int Mutex::init()  {
-    const auto stat = mtx_init(&impl_, 0);
+    const auto stat = mtx_init(&_thrd, 0);
     if (stat != 0) {
         io::log::error("nms.thread.Mutex: init failed");
     }
@@ -72,7 +72,7 @@ NMS_API int Mutex::init()  {
 }
 
 NMS_API int Mutex::destroy() {
-    const auto stat =  mtx_destroy(&impl_);
+    const auto stat =  mtx_destroy(&_thrd);
     if (stat != 0) {
         io::log::error("nms.thread.Mutex: destroy failed");
     }
@@ -80,19 +80,19 @@ NMS_API int Mutex::destroy() {
 }
 
 NMS_API void Mutex::lock() noexcept {
-    const auto stat = mtx_lock(&impl_);
+    const auto stat = mtx_lock(&_thrd);
     if (stat != 0) {
         io::log::error("nms.thread.Mutex: lock failed");
     }
 }
 
 NMS_API bool Mutex::trylock() {
-    const auto stat =  mtx_trylock(&impl_);
+    const auto stat =  mtx_trylock(&_thrd);
     return stat == 0;
 }
 
 NMS_API void Mutex::unlock() noexcept {
-    const auto stat = mtx_unlock(&impl_);
+    const auto stat = mtx_unlock(&_thrd);
     if (stat != 0) {
         io::log::error("nms.thread.Mutex: unlock failed");
     }

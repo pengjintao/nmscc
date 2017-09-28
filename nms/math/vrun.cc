@@ -8,7 +8,7 @@ nms_test(vline_1d) {
     Array<f32, 1> v({ 8 });
 
     v <<= vline(1.0f);
-    for (u32 i = 0; i < v.size(0); ++i) {
+    for (u32 i = 0; i < v.dims[0]; ++i) {
         test::assert_eq(v(i), f32(i));
     }
 }
@@ -17,8 +17,8 @@ nms_test(vline_2d) {
     Array<f32, 2> v({ 8, 8 });
 
     v <<= vline(1.0f, 0.1f);
-    for (u32 i = 0; i < v.size(0); ++i) {
-        for (u32 j = 0; j < v.size(1); ++j) {
+    for (u32 i = 0; i < v.dims[0]; ++i) {
+        for (u32 j = 0; j < v.dims[1]; ++j) {
             test::assert_eq(v(i,j), f32(i) + f32(j)*0.1f);
         }
     }
@@ -28,9 +28,9 @@ nms_test(vline_3d) {
     Array<f32, 3> v({ 8, 8, 8 });
 
     v <<= vline(1.0f, 0.1f, 0.01f);
-    for (u32 i = 0; i < v.size(0); ++i) {
-        for (u32 j = 0; j < v.size(1); ++j) {
-            for (u32 k = 0; k < v.size(2); ++k) {
+    for (u32 i = 0; i < v.dims[0]; ++i) {
+        for (u32 j = 0; j < v.dims[1]; ++j) {
+            for (u32 k = 0; k < v.dims[2]; ++k) {
                 test::assert_eq(v(i, j, k), f32(i) + f32(j)*0.1f + f32(k)*0.01f);
             }
         }

@@ -92,7 +92,7 @@ protected:
     mutable volatile u32    query_cnt_  = 0;
     State                   status_     = State::None;
 
-    explicit ITask(const StrView& name)
+    explicit ITask(const str& name)
         : name_(name)
     { }
 

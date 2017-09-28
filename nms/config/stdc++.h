@@ -13,16 +13,18 @@
 
 /* check: c++14 */
 #ifdef NMS_CC_MSVC
-#   if _MSVC_LANG < 201402L
+#   if  !defined(NMS_CC_CLANG) && _MSVC_LANG < 201402L
 #       error "nmscc shold compile with c++14"
 #   endif
-#else
+#endif
+
+#ifndef NMS_CC_MSVC
 #   if __cplusplus < 201402L
 #       error "nmscc shold compile with c++14"
 #   endif
 #endif
 
-#ifdef NMS_CC_GNUC
+#ifndef NMS_CC_MSVC
 #include <cxxabi.h>
 #endif
 

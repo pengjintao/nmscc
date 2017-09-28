@@ -5,12 +5,12 @@
 namespace nms::system
 {
 
-NMS_API StrView getenv(const StrView& name) {
+NMS_API str getenv(const str& name) {
     // check if name is empty
-    if (name.count()==0) {
+    if (name.count==0) {
         return {};
     }
-    auto cname = name.data();
+    auto cname = name.data;
 
     auto buff   = ::getenv(cname);
     auto size   = strlen(buff);

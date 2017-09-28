@@ -39,7 +39,7 @@ static auto cudaFun(u32 id) {
     static auto& lib = cudaLib();
 
     static Library::Function funcs[] = {
-#define NMS_CUDA_FUN(name) lib[StrView{#name}]
+#define NMS_CUDA_FUN(name) lib[str{#name}]
         NMS_CUDA_DEF(NMS_CUDA_FUN)
 #undef  NMS_CUDA_FUN
     };
@@ -61,19 +61,20 @@ static auto cudaFun(u32 id) {
 #pragma endregion
 
 #pragma region exception
-void Exception::format(IString& buf) const {
+void Exception::sformat(IString& buf) const {
     static auto& lib = cudaLib();
     if (!lib) {
-        buf += StrView("nms.cuda: cuda error not initialized");
+        buf += str("nms.cuda: cuda error not initialized");
         return;
     }
 
     try {
         const char* errmsg = nullptr;
         NMS_CUDA_DO(cuGetErrorName)(static_cast<CUresult>(id_), &errmsg);
-        sformat(buf, "nms.cuda: error({}), {}", id_, StrView{ errmsg, u32(strlen(errmsg)) });
-    } catch(...)
-    {}
+        nms::sformat(buf, "nms.cuda: error({}), {}", id_, str{ errmsg, u32(strlen(errmsg)) });
+    }
+    catch (...) {
+    }
 }
 
 /**
@@ -370,12 +371,12 @@ NMS_API void tex_del(u64 obj) {
 #pragma endregion
 
 #pragma region module
-NMS_API Module::Module(StrView ptx)
+NMS_API Module::Module(str ptx)
     : module_(nullptr)
 {
     driver_init();
 
-    auto eid = NMS_CUDA_DO(cuModuleLoadData)(&module_, ptx.data());
+    auto eid = NMS_CUDA_DO(cuModuleLoadData)(&module_, ptx.data);
     if (eid != 0) {
         io::log::error("nms.cuda.Module.build: load ptx failed.");
     }
@@ -390,12 +391,12 @@ NMS_API Module::~Module() {
     module_ = nullptr;
 }
 
-NMS_API Module::sym_t Module::get_symbol(StrView name) const {
+NMS_API Module::sym_t Module::get_symbol(str name) const {
     if (module_ == nullptr) {
         return nullptr;
     }
 
-    auto cname = name.data();
+    auto cname = name.data;
 
     CUdeviceptr ptr = 0;
     size_t      size = 0;
@@ -412,12 +413,12 @@ NMS_API void Module::set_symbol(sym_t data, const void* value, u32 size) const {
 }
 
 
-NMS_API Module::fun_t Module::get_kernel(StrView name) const {
+NMS_API Module::fun_t Module::get_kernel(str name) const {
     if (module_ == nullptr) {
         return nullptr;
     }
 
-    auto cname = name.data();
+    auto cname = name.data;
 
     CUfunc_st* fun = nullptr;
     auto ret = NMS_CUDA_DO(cuModuleGetFunction)(&fun, module_, cname);

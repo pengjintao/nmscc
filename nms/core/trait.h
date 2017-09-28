@@ -5,19 +5,18 @@
 namespace nms
 {
 
-#pragma region compiler fix
-#if defined(NMS_CC_GNUC) && !defined(NMS_CC_CLANG)
-template<class T, class ...X>
-constexpr auto is_constructible(...) -> bool {
-    return false;
-}
+#pragma region Version
+template<u32 Major, u32 Minor = 0>
+struct Tver: public Tver<Major,   Minor-1>
+{};
 
-template<class T, class ...X>
-constexpr auto is_constructible(int) -> decltype(T(declval<X>()...), true) {
-    return true;
-}
-#define __is_constructible(T, ...)  is_constructible<T, __VA_ARGS__>(0)
-#endif
+template<u32 Major>
+struct Tver<Major, 0>: public Tver<Major-1, 0>
+{};
+
+template<>
+struct Tver<0, 0>
+{};
 #pragma endregion
 
 #pragma region Tval
@@ -66,6 +65,7 @@ constexpr auto $17 = $i32<17>;
 constexpr auto $18 = $i32<18>;
 constexpr auto $19 = $i32<19>;
 }
+#pragma endregion
 
 #pragma region repeat
 template<u32 N, class T, T t, T ...V> struct _Trep;
@@ -75,18 +75,15 @@ template<       class T, T t, T ...V> struct _Trep<0, T, t, V...> { using U = Tv
 template<u32 N, class T=u32, T t=0> using Trep = typename _Trep<N, T, t>::U;
 #pragma endregion
 
-#pragma region sequential
-template<u32 N, u32 ...V> struct _Tseq;
-template<u32 N, u32 ...V> struct _Tseq          { using U = typename _Tseq<N - 1, N - 1, V...>::U; };
-template<       u32 ...V> struct _Tseq<0, V...> { using U = Tu32<V...>; };
+#pragma region index_seq
+/*! alias Tu32<0, ... N-1> */
+template<u32 N>
+using Tindex_seq = __make_integer_seq<Tval, u32, N>;
 
+/*! Tu32<0, ... N-1>{} */
+template<u32 N>
+static const     auto $index_seq = Tindex_seq<N>{};
 
-template<u32 N > using Tseq = typename _Tseq<N>::U;
-
-namespace
-{
-template<u32 N > constexpr Tseq<N> $seq  ={};
-}
 #pragma endregion
 
 #pragma region idx op
@@ -102,13 +99,13 @@ constexpr auto idx_sum(Tu32<I...>, const V& v) {
 }
 
 template<class V>
-constexpr auto iprod(Tu32<>, const V& v) {
+constexpr auto idx_prod(Tu32<>, const V& v) {
     (void)v;
     return decltype(v[0]){1};
 }
 
 template<u32 ...I, class V>
-constexpr auto iprod(Tu32<I...>, const V& v) {
+constexpr auto idx_prod(Tu32<I...>, const V& v) {
     return prod(v[I]...);
 }
 #pragma endregion
@@ -154,19 +151,30 @@ template<u32 K, u32 ...I           > struct _Tindex<K, Tu32<I...>             > 
 template<u32 K, u32 ...I, bool ...V> struct _Tindex<K, Tu32<I...>, true,  V...> { using U = typename _Tindex<K + 1, Tu32<I..., K>, V...>::U; };
 template<u32 K, u32 ...I, bool ...V> struct _Tindex<K, Tu32<I...>, false, V...> { using U = typename _Tindex<K + 1, Tu32<I...   >, V...>::U; };
 
-template<bool ...V> using       Tindex  = typename _Tindex<0, Tu32<>, V...>::U;
+template<bool ...V> using       Tindex_if  = typename _Tindex<0, Tu32<>, V...>::U;
 
 namespace
 {
-template<bool ...V> constexpr   Tindex <V...> $index ={};
+template<bool ...V> constexpr   Tindex_if <V...> $index_if ={};
 }
 #pragma endregion
 
-#pragma region Tver
-template<u32 I> struct Tver;
-template<u32 I> struct Tver : public Tver<I - 1> {};
-template<>      struct Tver<0> {};
-#pragma endregion
+#pragma region select
+template<class T, class ...U>
+decltype(auto) _select_idx(Tu32<0>, T&& t, U&& .../*u*/) {
+    return fwd<T>(t);
+}
+
+template<u32 I, class T, class ...U>
+decltype(auto) _select_idx(Tu32<I>, T&& /*t*/, U&& ...u) {
+    return _select_idx(Tu32<I - 1>{}, fwd<U>(u)...);
+}
+
+/*! select value at index=I */
+template<u32 I, class ...T>
+decltype(auto) select_idx(T&& ...t) {
+    return _select_idx(Tu32<I>{}, fwd<T>(t)...);
+}
 
 #pragma endregion
 
@@ -218,25 +226,25 @@ constexpr bool $any_as = $any<As<T, U>::$value...>;
 #pragma endregion
 
 #pragma region when
-template<bool  X, class T = void>
+template<bool Xcond, class Ttype = void>
 struct _$When;
 
-template<class T>
-struct _$When<true, T>
+template<class Ttype>
+struct _$When<true, Ttype>
 {
-    using U = T;
+    using U = Ttype;
 };
 
-template<bool X, class T = void>
-using $when = typename _$When<X, T>::U;
+template<bool Xcond, class Ttype = void>
+using $when = typename _$When<Xcond, Ttype>::U;
 
 /* compile when U==T */
-template<class T, class U>
-using $when_is = $when<Is<T, U>::$value>;
+template<class Texpect, class Tvalue, class Ttype=void >
+using $when_is = $when<Is<Texpect, Tvalue>::$value, Ttype>;
 
 /* compile when U==T */
 template<class T, class ...U>
-using $when_as = $when<As<T, U...>::$value>;
+using $when_as = $when<As<T, U...>::$value, void>;
 #pragma endregion
 
 #pragma region is: impl
@@ -266,6 +274,18 @@ template<class T>   struct Is<$uint,    T> { static constexpr auto $value = $is<
 template<class T>   struct Is<$int,     T> { static constexpr auto $value = $is<$sint,T>    || $is<$uint,T>;    };
 template<class T>   struct Is<$float,   T> { static constexpr auto $value = $is<f32,T>      || $is<f64,T>;      };
 template<class T>   struct Is<$number,  T> { static constexpr auto $value = $is<$int,T>     || $is<$float,T>;   };
+#pragma endregion
+
+#pragma region Tthis
+template<class T>
+struct Tfunc;
+
+template<class R, class T, class ...X>
+struct Tfunc<R(T::*)(X...)>
+{
+    using Tret  = R;
+    using Ttype = T;
+};
 #pragma endregion
 
 }

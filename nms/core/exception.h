@@ -1,109 +1,100 @@
 #pragma once
 
 #include <nms/core/base.h>
+#include <nms/core/view.h>
 
 namespace nms
 {
-class StackInfo;
 
-class IException
+struct StackInfo;
+
+template<u32 N, class ...Targs>
+void sformat(IString& outbuf, const char(&fmt)[N], const Targs& ...args);
+
+NMS_API void        set_exception_stackinfo() noexcept;
+NMS_API StackInfo&  get_exception_stackinfo() noexcept;
+
+#define NMS_THROW(...)  set_exception_stackinfo(); throw(__VA_ARGS__)
+
+struct Esystem: public Iexception
 {
-public:
-    virtual ~IException() = default;
+    using Teid = i32;
+    Teid eid;
 
-    virtual void format(IString& /*buf*/) const
-    {}
+    Esystem(const Teid& eid): eid(eid) {}
 
-    NMS_API static void        set_stackinfo();
-    NMS_API static StackInfo&  get_stackinfo();
-
-protected:
-    constexpr IException() = default;
-};
-
-#define NMS_THROW(...)  IException::set_stackinfo(); throw(__VA_ARGS__)
-
-template<class ...T>
-void sformat(IString& buf, const StrView& fmt, const T& ...t);
-
-class ESystem
-    : public IException
-{
-public:
-    using Teid      = i32;
-
-    ESystem()
-        : eid_(system_error())
-    {}
-
-    explicit ESystem(Teid id)
-        : eid_(id)
-    {}
-
-    Teid eid() const noexcept {
-        return eid_;
+    void sformat(IString& buf) const override {
+        char msg[256] = "";
+        _get_errstr(eid, msg, u32(sizeof(msg)));
+        nms::sformat(buf, "eid=`{}`, msg=`{}`", eid, static_cast<const char*>(msg) );
     }
-
-    NMS_API void format(IString& buf) const override;
-
-protected:
-    Teid eid_;
-
-    static NMS_API i32 system_error();
+private:
+    NMS_API static i32  _get_errno();
+    NMS_API static void _get_errstr(Teid eid, char* outbuf, u32 max_cnt);
 };
 
-class IEOutOfRange
-    : public IException
+struct IEoutofrange: public Iexception
 {};
 
 template<class T>
-class EOutOfRange
-    : public IEOutOfRange
+struct Eoutofrange: IEoutofrange
 {
-public:
-    EOutOfRange(const T& min_val, const T& max_val, const T& val)
-        : min_(min_val), max_(max_val), val_(val)
-    { }
+    T   min;
+    T   max;
+    T   val;
 
-    void format(IString& buf) const override {
-        sformat(buf, "range=[{}, {}], value=`{}`", min_, max_, val_);
+    Eoutofrange(const T& min, const T& max, const T& val): min(min), max(max), val(val)
+    {}
+
+    void sformat(IString& buf) const override {
+        nms::sformat(buf, "range=[{}, {}], value=`{}`", min, max, val);
     }
-protected:
-    T   min_;
-    T   max_;
-    T   val_;
+
 };
 
-template<class T>
-EOutOfRange<T> out_of_range(const T& min_val, const T& max_val, const T& val) {
-    return { min_val, max_val, val };
-}
-
-class IEunexpect
-    : public IException
+struct IEunexpect: public Iexception
 {};
 
 template<class T>
-class Eunexpect
-    : public IEunexpect
+struct Eunexpect: public IEunexpect
 {
-public:
-    Eunexpect(const T& expect, const T& value)
-        : expect_(expect), value_(value)
-    { }
+    T   expect;
+    T   value;
 
-    void format(IString& buf) const override {
-        sformat(buf, "expect=`{}`, value=`{}`", expect_, value_);
+    Eunexpect(const T& expect, const T& value): expect(expect), value(value)
+    {}
+
+    void sformat(IString& buf) const override {
+        nms::sformat(buf, "expect=`{}`, value=`{}`", expect, value);
     }
-
-protected:
-    T   expect_;
-    T   value_;
 };
 
 template<class T>
-Eunexpect<T> unexpect(const T& expect, const T& value) {
-    return { expect, value };
-}
+struct Einvalid: public Iexception
+{
+    T value;
+
+    Einvalid(const T& value): value(value)
+    {}
+
+    void sformat(IString& buf) const override {
+        nms::sformat(buf, "value = {}", value);
+    }
+};
+
+template<class T>
+struct Enotfound: public Iexception
+{
+    T value;
+
+    Enotfound(const T& value): value(value) {
+    }
+
+    void sformat(IString& buf) const override {
+        nms::sformat(buf, "value = {}", value);
+    }
+};
+
+
 
 }

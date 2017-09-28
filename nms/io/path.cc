@@ -10,7 +10,7 @@ extern "C" {
     u32   GetModuleFileNameA(void* hModule, char lpFileName[], u32 nSize);
 }
 
-static StrView _get_app_dir() {
+static str _get_app_dir() {
 
     // /opt/app/bin/ddd.exe
     //         ^   ^       ^
@@ -23,17 +23,17 @@ static StrView _get_app_dir() {
 
 #if defined(NMS_OS_WINDOWS)
     const auto mod = GetModuleHandleA(nullptr);
-    exe_len   = GetModuleFileNameA(mod, exe_path.data(), exe_path.capacity());
+    exe_len   = GetModuleFileNameA(mod, exe_path.data, exe_path.capacity);
     exe_path._resize(exe_len);
     exe_path.replace('\\', '/');
 
 #elif defined(NMS_OS_MACOS)
     exe_len = exe_path.capicity();
-    _NSGetExecutablePath(exe_path.data(), &exe_len);
+    _NSGetExecutablePath(exe_path.data, &exe_len);
     bin_path.resize(exe_len);
 
 #elif defined(NMS_OS_UNIX)
-    auto ret  = ::readlink("/proc/self/exe", exe_path.data(), exe_path.capacity());
+    auto ret  = ::readlink("/proc/self/exe", exe_path.data, exe_path.capacity);
     if (ret == -1) {
         return {};
     }
@@ -71,7 +71,7 @@ static StrView _get_app_dir() {
 }
 
 #ifdef NMS_OS_WINDOWS
-static StrView _get_home_dir() {
+static str _get_home_dir() {
 #if defined(NMS_OS_UNIX)
     static U8String<256> home_dir = system::getenv("HOME");
 #elif  defined(NMS_OS_WINDOWS)
@@ -86,8 +86,8 @@ static StrView _get_home_dir() {
 }
 #endif
 
-NMS_API Path& Path::operator/=(const StrView& rhs) {
-    const auto str_len = str_.count();
+NMS_API Path& Path::operator/=(const str& rhs) {
+    const auto str_len = str_.count;
 
     if (str_len == 0) {
         str_ = rhs;
@@ -101,34 +101,34 @@ NMS_API Path& Path::operator/=(const StrView& rhs) {
     return *this;
 }
 
-NMS_API Path& Path::operator+=(const StrView& rhs) {
+NMS_API Path& Path::operator+=(const str& rhs) {
     str_ += rhs;
     return *this;
 }
 
-NMS_API StrView Path::ext() const {
-    const auto  cnt = str_.count();
+NMS_API str Path::ext() const {
+    const auto  cnt = str_.count;
     auto        idx = cnt - 1;
     while (idx > 0 && str_[idx] != '.') {
         --idx;
     }
 
-    const auto ret = (idx != 0) ? str_.slice(idx, cnt - 1) : StrView{};
+    const auto ret = (idx != 0) ? str_.slice(idx, cnt - 1) : str{};
     return  ret;
 }
 
-NMS_API StrView Path::base() const {
-    const auto  cnt = str_.count();
+NMS_API str Path::base() const {
+    const auto  cnt = str_.count;
     auto        idx = cnt - 1;
     while (idx > 0 && str_[idx] != '.') {
         --idx;
     }
 
-    const auto ret = idx != 0 ? str_.slice(0u, idx - 1) : StrView{ str_ };
+    const auto ret = idx != 0 ? str_.slice(0u, idx - 1) : str{ str_ };
     return ret;
 }
 
-NMS_API StrView Path::path() const {
+NMS_API str Path::path() const {
     static const auto app_dir  = _get_app_dir();
 
 #ifdef NMS_OS_WINDOWS
@@ -136,15 +136,15 @@ NMS_API StrView Path::path() const {
 #endif
 
     static thread_local U8String<1024>  full_path;
-    full_path._resize(0);
+    full_path._resize(0u);
 
     // check if empty
-    if (str_.count() == 0) {
+    if (str_.count == 0) {
         return {};
     }
 
     // if symbols
-    if (str_.count() >= 2 && str_[1] == '/') {
+    if (str_.count >= 2 && str_[1] == '/') {
         switch(str_[0]) {
             case '#':
                 full_path += app_dir;
@@ -161,7 +161,7 @@ NMS_API StrView Path::path() const {
         }
     }
     // if not null terminal
-    else if (str_[str_.count()] != '\0') {
+    else if (str_[str_.count] != '\0') {
         full_path += str_;
     }
     else {
@@ -169,12 +169,12 @@ NMS_API StrView Path::path() const {
     }
 
     // out-of-range
-    if (full_path.count() == full_path.capacity()) {
+    if (full_path.count == full_path.capacity) {
         return {};
     }
 
     // add zero
-    full_path[full_path.count()] = '\0';
+    full_path[full_path.count] = '\0';
     return full_path;
 }
 
@@ -182,7 +182,7 @@ NMS_API Path cwd() {
     U8String<1024> buff;
 
 #ifdef NMS_OS_WINDOWS
-    const auto ret = ::getcwd(buff.data(), i32(buff.capacity()));
+    const auto ret = ::getcwd(buff.data, i32(buff.capacity));
 #else
     const auto ret = ::getcwd(buff.data(), size_t(buff.capacity()));
 #endif
@@ -190,7 +190,7 @@ NMS_API Path cwd() {
         return {};
     }
 
-    const auto len = strlen(buff.data());
+    const auto len = strlen(buff.data);
     buff._resize(len);
 
 #ifdef NMS_OS_WINDOWS
@@ -201,14 +201,14 @@ NMS_API Path cwd() {
 }
 
 NMS_API void chdir(const Path& path) {
-    const StrView full_path = path.path();
+    const str full_path = path.path();
 
-    if (full_path.count()==0) {
+    if (full_path.count==0) {
         log::error("nms.io.chdir: null path!!");
-        NMS_THROW(ESystem(0));
+        NMS_THROW(Esystem{ ENOENT });
     }
 
-    const auto ret = ::chdir(full_path.data());
+    const auto ret = ::chdir(full_path.data);
 
     if (ret != 0) {
         log::error("nms.io.chdir: cannot chdir to '{}'", full_path);
@@ -216,14 +216,14 @@ NMS_API void chdir(const Path& path) {
         if (!exists(path)) {
             log::error("nms.io.chdir: '{}' not exists", full_path);
         }
-        NMS_THROW(ESystem());
+        NMS_THROW(Esystem(ENOENT));
     }
 }
 
 NMS_API void mkdir(const Path& path) {
     const auto full_path = path.path();
 
-    if (full_path.count()==0) {
+    if (full_path.count==0) {
         log::error("nms.io.chdir: null path!!");
         return;
     }
@@ -233,25 +233,25 @@ NMS_API void mkdir(const Path& path) {
     }
 
 #ifdef NMS_CC_MSVC
-    const auto ret = ::mkdir(full_path.data());
+    const auto ret = ::mkdir(full_path.data);
 #else
     const auto ret = ::mkdir(full_path.data(), 0755);
 #endif
 
     if (ret != 0) {
         log::error("nms.io.mkdir: cannot mkdir '{}'", full_path);
-        NMS_THROW(ESystem());
+        NMS_THROW(Esystem{ errno });
     }
 }
 
 NMS_API void remove(const Path& path) {
     const auto full_path = path.path();
 
-    if (full_path.count() == 0) {
+    if (full_path.count == 0) {
         log::error("nms.io.remove: null path");
         return;
     }
-    const auto ret = ::remove(full_path.data());
+    const auto ret = ::remove(full_path.data);
     if (ret != 0) {
         log::error("nms.io.remove: cannot remove '{}'", full_path);
     }
@@ -259,12 +259,12 @@ NMS_API void remove(const Path& path) {
 
 NMS_API bool exists(const Path& path) {
     const auto full_path = path.path();
-    if (full_path.count()==0) {
+    if (full_path.count==0) {
         log::error("nms.io.exists: null path!");
         return false;
     }
 
-    const auto ret = ::access(full_path.data(), 0);
+    const auto ret = ::access(full_path.data, 0);
     return ret == 0;
 }
 
@@ -272,11 +272,11 @@ NMS_API void rename(const Path& oldpath, const Path& newpath) {
     const auto old_cpath = oldpath.path();
     const auto new_cpath = newpath.path();
 
-    if (old_cpath.count() == 0 || new_cpath.count() == 0) {
+    if (old_cpath.count == 0 || new_cpath.count == 0) {
         return;
     }
 
-    const auto ret = ::rename(old_cpath.data(), new_cpath.data());
+    const auto ret = ::rename(old_cpath.data, new_cpath.data);
     if (ret != 0) {
         log::error("nms.io.rename: cannot rename '{}' -> '{}'", old_cpath, new_cpath);
     }

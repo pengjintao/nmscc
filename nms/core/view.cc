@@ -4,13 +4,13 @@
 namespace nms
 {
 
-NMS_API void ViewInfo::format(IString& buf) const {
-    sformat(buf, "{:c}{}x{}", type, size * 8, rank);
+NMS_API void ViewInfo::sformat(IString& buf) const {
+    nms::sformat(buf, "{:c}{}x{}", type, size * 8, rank);
 }
 
 template<class Tview>
 static void assert_dims(const Tview& view, const typename Tview::Tdims& dims) {
-    auto view_dims = view.size();
+    auto view_dims = view.dims;
     test::assert_eq(view_dims, dims);
 }
 

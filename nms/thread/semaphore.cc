@@ -48,17 +48,17 @@ NMS_API void Semaphore::open(u32 value) {
     const auto  count = snprintf(sem_name, sizeof(sem_name), "nms_%d.%d.%d.sem", rand, pid, idx++);
     (void)count;
 
-    impl_ = sem_open(sem_name, O_CREAT, 0, value);
+    _thrd = sem_open(sem_name, O_CREAT, 0, value);
 }
 
 
 NMS_API void Semaphore::close() {
-    if (impl_ == nullptr) {
+    if (_thrd == nullptr) {
         return;
     }
 
-    sem_close(static_cast<sem_t*>(impl_));
-    impl_ = nullptr;
+    sem_close(static_cast<sem_t*>(_thrd));
+    _thrd = nullptr;
 }
 
 NMS_API Semaphore& Semaphore::operator+=(u32 n) {
@@ -66,20 +66,20 @@ NMS_API Semaphore& Semaphore::operator+=(u32 n) {
         return *this;
     }
 #ifdef NMS_OS_WINDOWS
-    sem_post(static_cast<sem_t*>(impl_), n);
+    sem_post(static_cast<sem_t*>(_thrd), n);
 #else
-    sem_post(static_cast<sem_t*>(impl_));
+    sem_post(static_cast<sem_t*>(_fobj));
 #endif
     return *this;
 }
 
 NMS_API Semaphore& Semaphore::operator++() {
-    sem_post(static_cast<sem_t*>(impl_));
+    sem_post(static_cast<sem_t*>(_thrd));
     return *this;
 }
 
 NMS_API Semaphore& Semaphore::operator--() {
-    auto stat = sem_wait(static_cast<sem_t*>(impl_));
+    auto stat = sem_wait(static_cast<sem_t*>(_thrd));
     (void)stat;
     return *this;
 }

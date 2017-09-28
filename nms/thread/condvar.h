@@ -11,7 +11,7 @@ class CondVar
 {
 public:
     CondVar()
-        : impl_{}
+        : _thrd{}
     {
         init();
     }
@@ -20,18 +20,10 @@ public:
         destroy();
     }
 
-    CondVar(CondVar&& rhs) {
-        nms::swap(impl_, rhs.impl_);
-    }
-
-    CondVar& operator= (CondVar&& rhs) {
-        if (this != &rhs) {
-            nms::swap(impl_, rhs.impl_);
-        }
-        return *this;
-    }
-
+    CondVar(CondVar&& rhs)  = delete;
     CondVar(const CondVar&) = delete;
+
+    CondVar& operator= (CondVar&& rhs)  = delete;
     CondVar& operator= (const CondVar&) = delete;
 
     NMS_API int init();
@@ -41,7 +33,7 @@ public:
     NMS_API int wait(Mutex& lock);
 
 private:
-    cnd_t impl_;
+    cnd_t _thrd;
 };
 
 }

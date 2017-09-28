@@ -9,291 +9,176 @@
 namespace nms
 {
 
-struct IFormatable
+struct FormatStyle
 {
-    template<class T>
-    static void _format(IString& buf, const T& obj) {
-        IFormatable self;
+    char align      = '\0';     // [<>=^]?
+    char sign       = '\0';     // [+- ]?
+    u8   width      = 0;        // [0-9]*
+    u8   prec       = 0;        // [0-9]*
 
-        auto name_len = 4u;
-        self._do_format(nullptr, obj, name_len);
-        name_len = (name_len + 3) / 4 * 4;  // 4 spaces indent
-        self._do_format(&buf, obj, name_len);
-    }
+    char type       = '\0';     // [a-z]?
+    char spec[11]   = {};
 
-private:
-    template<class T>
-    void _do_format(IString* buf, const T& obj, u32& name_len) const {
-        if (buf != nullptr) *buf += "{\n";
+    static FormatStyle fmt_uint           (char align)              { FormatStyle style; style.align = align;                          return style; }
+    static FormatStyle fmt_uint_with_width(char align, u32 width)   { FormatStyle style; style.align = align; style.width = u8(width); return style; }
 
-#define call_do_format(n, ...)    this->_do_format_switch(Ti32<n>{}, buf, obj, name_len);
-        { NMSCPP_LOOP(99, call_do_format, ~) }
-#undef call_do_format
-        if (buf != nullptr) *buf += "}\n";
-    }
+    static FormatStyle fmt_sint           (char align)              { FormatStyle style; style.align = align; style.sign = '+';                          return style; }
+    static FormatStyle fmt_sint_with_width(char align, u32 width)   { FormatStyle style; style.align = align; style.sign = '+'; style.width = u8(width); return style; }
 
-    // format-do
-    template<class T, i32 I, class = $when<(I + 1 <= T::_$property_cnt)> >
-    void _do_format_switch(Ti32<I> idx, IString* buf, const T& obj, u32& name_len) const {
-        _do_format_property(idx, buf, obj, name_len);
-    }
-
-    // format-end
-    template<class T, i32 I, class = $when<(I + 0 >= T::_$property_cnt)> >
-    void _do_format_switch(Ti32<I>, IString*, const T&, ...) const {
-    }
-
-    template<class T, i32 I>
-    void _do_format_property(Ti32<I> idx, IString* buf, const T& obj, u32& name_len) const;
+    NMS_API static FormatStyle from_fmt_str(const str& str);
 };
 
-#pragma region format: basic types
-NMS_API void _format(IString& buf, const StrView& fmt, i8       val);
-NMS_API void _format(IString& buf, const StrView& fmt, u8       val);
-NMS_API void _format(IString& buf, const StrView& fmt, i16      val);
-NMS_API void _format(IString& buf, const StrView& fmt, u16      val);
-NMS_API void _format(IString& buf, const StrView& fmt, i32      val);
-NMS_API void _format(IString& buf, const StrView& fmt, u32      val);
-NMS_API void _format(IString& buf, const StrView& fmt, i64      val);
-NMS_API void _format(IString& buf, const StrView& fmt, u64      val);
-NMS_API void _format(IString& buf, const StrView& fmt, f32      val);
-NMS_API void _format(IString& buf, const StrView& fmt, f64      val);
-NMS_API void _format(IString& buf, const StrView& fmt, StrView  val);
-NMS_API void _format(IString& buf, const StrView& fmt, bool     val);
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, i8   val);
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, u8   val);
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, i16  val);
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, u16  val);
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, i32  val);
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, u32  val);
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, i64  val);
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, u64  val);
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, f32  val);
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, f64  val);
+
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, bool val);
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, str  val);
 
 #ifdef NMS_STDCXX_TYPEINFO
-NMS_API void _format(IString& buf, const StrView& fmt, decltype(typeid(void)) val);
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, const std::type_info& val);
 #endif
 
-NMS_API void _format(IString& buf, const StrView& fmt, const IException&  val);
-
-inline  void _format(IString& buf, const StrView& fmt, const void* val) {
-    fmt.count() == 0
-        ? _format(buf, "0x{:x}", reinterpret_cast<u64>(val))
-        : _format(buf, fmt, reinterpret_cast<u64>(val));
-}
-
-inline  void _format(IString& buf, const StrView& fmt, const IString& val) {
-    _format(buf, fmt, StrView(val));
-}
-
 template<u32 N>
-inline  void _format(IString& buf, const StrView& fmt, const char(&v)[N]) {
-    _format(buf, fmt, StrView{ v });
+void _sformat_val(IString& buf, const FormatStyle& style, const char(&val)[N]) {
+    _sformat_val(buf, style, str(val));
 }
 
-inline  void _format(IString& buf, const StrView& fmt, const char* str) {
-    _format(buf, fmt, StrView{ str, u32(strlen(str)) });
+inline void _sformat_val(IString& buf, const FormatStyle& style, const char* val) {
+    _sformat_val(buf, style, str(val, strlen(val)));
 }
 
-#pragma endregion
+namespace ns_format
+{
 
-#pragma region format switch
-#ifndef NMS_CC_INTELLISENSE
+NMS_API bool next_value(IString& outbuf, str& strfmt, str& valfmt);
 
+/*! redirect: value.sformat(outbuf, style) */
 template<class T>
-__forceinline auto _format_switch(IString& buf, const StrView& fmt, const T& t, Tver<5>) -> decltype(t.format(buf, fmt)) {
-    return t.format(buf, fmt);
-}
-
-template<class T>
-__forceinline auto _format_switch(IString& buf, const StrView& fmt, const T& t, Tver<4>) -> decltype(t.format(buf)) {
-    (void)fmt;
-    return t.format(buf);
-}
-
-template<class T>
-__forceinline auto _format_switch(IString& buf, const StrView& fmt, const T& t, Tver<3>) -> decltype(_format(buf, fmt, t)) {
-    return _format(buf, fmt, t);
-}
-
-template<class T, class = $when_is<$enum, T> >
-__forceinline auto _format_switch(IString& buf, const StrView& fmt, const T& t, Tver<2>) {
-    auto str = mkEnum(t).name();
-    if (str.count() != 0) {
-        _format(buf, fmt, str);
-    }
-    else {
-        buf += typeof<T>().name();
-        buf += ".";
-        _format(buf, fmt, u32(t));
-    }
+auto match_version(IString& outbuf, const FormatStyle& style, const T& value, Tver<4>) -> decltype(value.sformat(outbuf, style)) {
+    value.sformat(outbuf, style);
     return;
 }
 
-template<class T, class = $when_is<IFormatable, T> >
-__forceinline auto _format_switch(IString& buf, const StrView& /*fmt*/, const T& t, Tver<1>) {
-    return IFormatable::_format(buf, t);
+/*! redirect: value.sformat(outbuf) */
+template<class T>
+auto match_version(IString& outbuf, const FormatStyle& /*style*/, const T& value, Tver<3>) -> decltype(value.sformat(outbuf)) {
+    value.sformat(outbuf);
+    return;
 }
 
-template<class T, class = $when_as<StrView, T> >
-__forceinline auto _format_switch(IString& buf, const StrView& fmt, const T& t, Tver<0>) {
-    auto str = static_cast<StrView>(t);
-    _format(buf, fmt, str);
+/*! redirect: reflect_format */
+template<class T>
+struct Tmatch_reflect {
+    void _format(IString& outbuf, const FormatStyle& style, const T& object) const {
+        _format_idx(outbuf, style, object, Tu32<0>{}, Tu32<T::_$member_cnt>{});
+    }
+private:
+    template<u32 Idx>
+    void _format_idx(IString& outbuf, const FormatStyle& style, const T& object, Tu32<Idx>, Tu32<1>) const {
+        this->_format_member<Idx>(outbuf, style, object);
+    }
+
+    template<u32 Idx, u32 Iver>
+    void _format_idx(IString& outbuf, const FormatStyle& style, const T& object, Tu32<Idx>, Tu32<Iver>) const {
+        this->_format_member<Idx>(outbuf, style, object);
+        this->_format_idx(outbuf, style, object, Tu32<Idx + 1>{}, Tu32<Iver - 1>{});
+    }
+
+    template<u32 Idx>
+    void _format_member(IString& outbuf, const FormatStyle& style, const T& object) const {
+        using Tmember = typename Tmembers<T>::type<Idx>;
+        const auto  name  = Tmember::name();
+        const auto& value = Tmember::value(object);
+
+        outbuf += '\n';
+        outbuf += '\t';
+        outbuf += name;
+        outbuf += ':';
+        outbuf += '\t';
+        match_version(outbuf, style, value, Tver<9>{});
+    }
+};
+
+template<class T>
+auto match_version(IString& outbuf, const FormatStyle& style, const T& object, Tver<2>) -> decltype(T::_$member_cnt) {
+    Tmatch_reflect<T>{}._format(outbuf, style, object);
     return 0;
 }
 
-#endif
-
+/*! redirect: _sformat_val(..., value.name) */
 template<class T>
-void format_switch(IString& buf, const StrView& fmt, const T& t) {
-#ifndef NMS_CC_INTELLISENSE
-    _format_switch(buf, fmt, t, Tver<5>{});
-#else
-    (void)buf;
-    (void)fmt;
-    (void)t;
-#endif
-}
-#pragma endregion
-
-#pragma region format: array
-template<class T, u32 N>
-void _format(IString& buf, const StrView& fmt, const Vec<T, N>& v) {
-    buf += "[";
-    for (u32 i = 0; i < N; ++i) {
-        format_switch(buf, fmt, v[i]);
-        if (i != N - 1) buf += ", ";
-    }
-    buf += "]";
-}
-
-template<class T, u32 N>
-void _format(IString& buf, const StrView& fmt, const T(&v)[N]) {
-    buf += "[";
-    for (u32 i = 0; i < N; ++i) {
-        format_switch(buf, fmt, v[i]);
-        if (i != N - 1) buf += ", ";
-    }
-    buf += "]";
-}
-
-template<class T, u32 N>
-void _format(IString& buf, const StrView& fmt, const View<T, N>& v) {
-    const auto n = v.count();
-    buf += "[";
-    for (u32 i = 0; i < n; ++i) {
-        format_switch(buf, fmt, v[i]);
-        if (i != n - 1) buf += ", ";
-    }
-    buf += "]";
-}
-
-/*! format: view<T,1> */
-template<class T>
-void _format(IString& buf, const StrView& fmt, const View<T, 1>& v1) {
-    static const StrView delimiter = ", ";
-    buf.reserve(buf.count() + v1.count() * 8);
-
-    const auto nx = v1.count();
-
-    for (u32 x = 0; x < nx; ++x) {
-        format_switch(buf, fmt, v1(x));
-        if (x != nx - 1) {
-            buf += delimiter;
-        }
-    }
-}
-
-/* format: view<T,2> */
-template<class T>
-void _format(IString& buf, const StrView& fmt, const View<T, 2>& v2) {
-    buf.reserve(buf.count() + v2.count() * 8);
-
-    const auto cnt = v2.size(1);
-
-    buf += StrView{ "\n" };
-    for (u32 i1 = 0; i1 < cnt; ++i1) {
-        buf += StrView{ "    |" };
-        auto v1 = v2.slice({ 0, -1 }, { i1 });
-        _format(buf, fmt, v1);
-        if (i1 + 1 != cnt) {
-            buf += "|\n";
-        }
-        else {
-            buf += "|";
-        }
-    }
-}
-
-#pragma endregion
-
-#pragma region format: object
-template<class T, i32 I>
-void IFormatable::_do_format_property(Ti32<I> idx, IString* buf, const T& obj, u32& name_len) const {
-    auto t = (obj)[idx];
-    auto& name  = t.name;
-    auto& value = (*t.pval);
-    if (buf != nullptr) {
-        buf->appends(4, ' ');
-        *buf += name;
-        buf->appends(name_len - name.count(), ' ');
-        *buf += StrView(": ");
-        format_switch(*buf, {}, value);
-        *buf += StrView("\n");
-    }
-    else {
-        if (name_len < name.count()) {
-            name_len = name.count();
-        }
-    }
+auto match_version(IString& outbuf, const FormatStyle& style, const T& value, Tver<1>) -> $when_is<$enum, T> {
+    auto name = Enum<T>{ value }.name;
+    _sformat_val(outbuf, style, name);
     return;
 }
-#pragma endregion
 
-#pragma region formatter
-class Formatter
-{
-public:
-    Formatter(IString* pbuf, const StrView& fmts)
-        : pbuf_(pbuf), fmts_(fmts)
-    {}
+/*! redirect: _sformat_val(..., value) */
+template<class T>
+auto match_version(IString& outbuf, const FormatStyle& style, const T& value, ...) {
+    _sformat_val(outbuf, style, value);
+    return;
+}
 
-    template<class ...U>
-    void operator()(const U& ...u) {
-        u32     id  = 0u;
-        StrView fmt = fmts_;
+inline void match_index(IString& /*outbuf*/, const FormatStyle& /*style*/, i32 /*id*/) {
+}
 
-        while (next(&id, &fmt)) {
-            _doFormat(id, fmt, u...);
-            ++id;
-        }
+template<class T, class ...U>
+void match_index(IString& outbuf, const FormatStyle& style, i32 id, const T& t, const U& ...u) {
+    if (id == 0) {
+        match_version(outbuf, style, t, Tver<9>{});
     }
-
-protected:
-    IString* pbuf_;
-    StrView fmts_;
-
-    NMS_API bool next(u32* id, StrView* fmt);
-
-    void _doFormat(u32 /*id*/, const StrView& /*fmt*/) const {
+    else {
+        match_index(outbuf, style, id - 1, u...);
     }
+}
 
-    template<class T, class ...U>
-    void _doFormat(u32 id, const StrView& fmt, const T& t, const U& ...u) {
-        if (id == 0) {
-            format_switch(*pbuf_, fmt, t);
-        }
-        else {
-            _doFormat(id - 1, fmt, u...);
-        }
+}
+
+template<class T>
+void sformat(IString& outbuf, const FormatStyle& style, const T& value) {
+    ns_format::match_version(outbuf, style, value, Tver<9> {});
+}
+
+template<class ...Targs>
+void sformat(IString& outbuf, str strfmt, const Targs& ...args) {
+    auto argid  = i32(0);
+    auto valfmt = str();
+
+    while (ns_format::next_value(outbuf, strfmt, valfmt)) {
+        auto style = FormatStyle::from_fmt_str(valfmt);
+        ns_format::match_index(outbuf, style, argid, args...);
+        ++argid;
     }
-};
+}
 
-#pragma endregion
+template<u32 N, class ...Targs>
+void sformat(IString& outbuf, const char(&fmt)[N], const Targs& ...args) {
+    sformat(outbuf, str(fmt), args...);
+}
 
-template<class ...T>
-void sformat(IString& buf, const StrView& fmt, const T& ...t) {
-    Formatter fmtter(&buf, fmt);
-    fmtter(t...);
+inline IString& _tls_buf_for_format() {
+    constexpr static auto $buff_size = 64 * 1024;   // 64K
+    static thread_local U8String<$buff_size> buf;
+    return buf;
 }
 
 /* format to string */
 template<class ...T>
-U8String<256> format(const StrView& fmt, const T& ...t) {
-    U8String<256> buf = {};
-    sformat(buf, fmt, t...);
-    return buf;
+str format(str fmt, const T& ...t) {
+    auto& outbuf = _tls_buf_for_format();
+    outbuf._resize(0);
+    sformat(outbuf, fmt, t...);
+    return outbuf;
 }
+
 
 }

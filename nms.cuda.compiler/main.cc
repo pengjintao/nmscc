@@ -22,10 +22,10 @@ int main(int argc, const char* argv[]) {
     cuda::Program program(nms_cuda_kernel_src);
 
     for (auto i = 1; i < argc; ++i) {
-        const auto arg = mkStrView(argv[i]);
+        const auto arg = make_str(argv[i]);
 
         if ((arg == "-o") && (i + 1 < argc)) {
-            ptx_path = mkStrView(argv[i + 1]);
+            ptx_path = make_str(argv[i + 1]);
             i += 2;
             continue;
         }
@@ -33,8 +33,8 @@ int main(int argc, const char* argv[]) {
         const auto src_path = arg;
         if (io::exists(src_path)) {
             sformat(program.src(), "#line 1 \"{}\"\n", src_path);
-            const io::TxtFile src_file(src_path, io::File::Write);
-            src_file.read(program.src(), src_file.size());
+            const auto src_file = io::TxtFile::open_for_write(src_path);
+            src_file.read(program.src(), src_file.size);
         }
         else {
             io::console::writeln("cannot find {}.", src_path);
@@ -48,7 +48,7 @@ int main(int argc, const char* argv[]) {
     }
 
     auto ptx = program.ptx();
-    io::TxtFile ptx_file(ptx_path, io::File::Write);
+    auto ptx_file = io::TxtFile::open_for_write(ptx_path);
     ptx_file.write(ptx);
 
     return 0;

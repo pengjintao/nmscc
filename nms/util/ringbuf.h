@@ -12,11 +12,11 @@ class Ringbuf final
 {
 public:
     class EEmpty final
-        : public IException
+        : public Iexception
     {};
 
     class EOverflow final
-        : public IException
+        : public Iexception
     {};
 
     explicit Ringbuf(u64 capicity)

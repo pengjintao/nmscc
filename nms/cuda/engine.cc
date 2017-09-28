@@ -48,7 +48,7 @@ static Library::Function nvrtcFun(u32 id) {
     static Library lib("nvrtc64_80.dll");
 
     static Library::Function funcs[] = {
-#define NMS_NVRTC_FUN(name) lib[StrView{#name}]
+#define NMS_NVRTC_FUN(name) lib[str{#name}]
         NMS_NVRTC_DEF(NMS_NVRTC_FUN)
 #undef  NMS_NVRTC_FUN
     };
@@ -70,11 +70,11 @@ NMS_API bool Program::compile() {
     static const int    argc = sizeof(argv) / sizeof(argv[0]);
 
     // create program
-    src_.reserve(src_.count() + 1);
-    src_[src_.count()] = '\0';
+    src_.reserve(src_.count + 1);
+    src_[src_.count] = '\0';
 
     nvrtcProgram nvrtc = nullptr;
-    NMS_NVRTC_DO(nvrtcCreateProgram)(&nvrtc, src_.data(), nullptr, 0, nullptr, nullptr);
+    NMS_NVRTC_DO(nvrtcCreateProgram)(&nvrtc, src_.data, nullptr, 0, nullptr, nullptr);
     if (nvrtc == nullptr) {
         io::log::error("nms.cuda.Program: cannot create program.");
     }
@@ -87,7 +87,7 @@ NMS_API bool Program::compile() {
         NMS_NVRTC_DO(nvrtcGetProgramLogSize)(nvrtc, &nvrtc_log_size);
 
         U8String<> nvrtc_log(static_cast<u32>(nvrtc_log_size));
-        NMS_NVRTC_DO(nvrtcGetProgramLog)(nvrtc, nvrtc_log.data());
+        NMS_NVRTC_DO(nvrtcGetProgramLog)(nvrtc, nvrtc_log.data);
         io::console::writeln(nvrtc_log);
 
         return false;
@@ -98,7 +98,7 @@ NMS_API bool Program::compile() {
     NMS_NVRTC_DO(nvrtcGetPTXSize)(nvrtc, &ptx_len);
 
     ptx_.reserve(u32(ptx_len));
-    NMS_NVRTC_DO(nvrtcGetPTX)(nvrtc, ptx_.data());
+    NMS_NVRTC_DO(nvrtcGetPTX)(nvrtc, ptx_.data);
     ptx_._resize(u32(ptx_len) - 1);
 
     // destroy program

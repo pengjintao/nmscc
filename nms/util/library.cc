@@ -35,11 +35,11 @@ static int dlclose(void* handle) {
 namespace nms
 {
 
-NMS_API Library::Library(const StrView& file_name) {
+NMS_API Library::Library(const str& file_name) {
     auto path       = io::Path(file_name);
     auto full_path  = path.path();
 
-    object_ = dlopen(full_path.data(), RTLD_LAZY);
+    object_ = dlopen(full_path.data, RTLD_LAZY);
 
     if (object_ ==  nullptr) {
         io::log::error("nms.Library: load {} failed", path);
@@ -53,11 +53,11 @@ NMS_API Library::~Library() {
     dlclose(object_);
 }
 
-NMS_API Library::Function Library::operator[](StrView name) const {
-    if (object_ == nullptr || name.count()==0) {
+NMS_API Library::Function Library::operator[](str name) const {
+    if (object_ == nullptr || name.count==0) {
         return { nullptr };
     }
-    auto ptr = dlsym(object_, name.data());
+    auto ptr = dlsym(object_, name.data);
     return Function{ reinterpret_cast<void*>(ptr) };
 }
 

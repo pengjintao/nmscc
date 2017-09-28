@@ -1,53 +1,62 @@
 #pragma once
 
-#include <nms/core/type.h>
 #include <nms/core/trait.h>
 
 namespace nms
 {
 
-template<class T, u32 ...Ns> struct Vec;
+template<typename T, u32 ...Ns>
+struct Vec;
 
-template<class T, u32 N>
+template<class T>
+struct Vec<T, 0>
+{
+    static constexpr auto $size  = 0;
+    static constexpr auto $count = 0;
+    T data;
+
+    template<typename I> __forceinline T&       operator[] (I)       noexcept { return data; }
+    template<typename I> __forceinline const T& operator[] (I) const noexcept { return data; }
+
+};
+
+template<typename T, u32 N>
 struct Vec<T, N>
 {
     static constexpr auto $size  = N;
     static constexpr auto $count = N;
     T data[$size];
 
-    __forceinline Vec() noexcept = default;
+    template<typename I> __forceinline T&       operator[] (I idx)       noexcept { return data[idx]; }
+    template<typename I> __forceinline const T& operator[] (I idx) const noexcept { return data[idx]; }
 
-    template<class U, class ...S>
-    __forceinline constexpr Vec(T t, U u, S ...s) noexcept
-        : data{ t, u, s... } {
-        static_assert(2 + sizeof...(S) == $size, "invalid Vec elements count");
+    static Vec from_array(const T(&array)[N]) {
+        return from_seq(Tindex_seq<N>{}, array);
     }
 
-    __forceinline constexpr Vec(T t) noexcept
-        : Vec{ &t, Trep<$size>{} }
-    {}
+    template<u32 ...I, typename Tarray>
+    static Vec from_seq(Tu32<I...>, const Tarray& array) {
+        return Vec{ { array[I]... }  };
+    }
 
-    __forceinline constexpr Vec(const T(&arr)[$size]) noexcept
-        : Vec{ arr, Tseq<$size>{} }
-    {}
+#pragma region format
+    template<typename Tbuff, typename Tstyle>
+    void sformat(Tbuff& outbuf, const Tstyle& style) const {
+        outbuf += '[';
 
-    typedef       T Tlhs[$size];
-    typedef const T Trhs[$size];
+        for (u32 i = 0u; i < $size; ++i) {
+            nms::sformat(outbuf, style, data[i]);
+            if (i + 1 != $count) {
+                outbuf += ", ";
+            }
+        }
 
-    __forceinline operator Tlhs& ()       { return data; }
-    __forceinline operator Trhs& () const { return data; }
-
-    template<class I> __forceinline T&       operator[] (I idx)       noexcept { return data[idx]; }
-    template<class I> __forceinline const T& operator[] (I idx) const noexcept { return data[idx]; }
-
-protected:
-    template<class V, u32 ...I>
-    __forceinline constexpr Vec(const V& v, Tu32<I...>) noexcept
-        : data{ v[I]... }
-    {}
+        outbuf += ']';
+    }
+#pragma endregion
 };
 
-template<class T, u32 N>
+template<typename T, u32 N>
 bool operator==(const Vec<T, N>& a, const Vec<T, N>& b) {
     for (u32 i = 0; i < N; ++i) {
         if (a[i] != b[i]) {
@@ -57,13 +66,13 @@ bool operator==(const Vec<T, N>& a, const Vec<T, N>& b) {
     return true;
 }
 
-template<class T, u32 N>
+template<typename T, u32 N>
 bool operator!=(const Vec<T, N>& a, const Vec<T, N>& b) {
     return !(a == b);
 }
 
 #define NMS_VEC_OP(op)                                                          \
-template<class T, u32 N>                                                        \
+template<typename T, u32 N>                                                        \
 __forceinline Vec<T, N> operator op(const Vec<T, N>& a, const Vec<T, N>& b) {   \
     Vec<T, N> c;                                                                \
     for (u32 i = 0; i < N; ++i) {                                               \
@@ -76,13 +85,6 @@ NMS_VEC_OP(-)
 NMS_VEC_OP(*)
 NMS_VEC_OP(/ )
 #undef  NMS_VEC_OP
-
-
-/* --- vec utils --- */
-template<class T, u32 N>
-constexpr Vec<T, N> toVec(T(&v)[N]) {
-    return v;
-}
 
 /* --- vec alias --- */
 using i8x1  = Vec<i8,  1>; using u8x1  = Vec<u8,  1>;

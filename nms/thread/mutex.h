@@ -35,7 +35,7 @@ public:
 
 private:
     friend class CondVar;
-    mtx_t impl_ = {};
+    mtx_t _thrd = {};
 };
 
 struct LockGuard final

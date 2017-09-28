@@ -5,7 +5,7 @@
 namespace nms::io
 {
 
-class ENotExists: public IException
+class ENotExists: public Iexception
 {};
 
 class Path final
@@ -15,7 +15,7 @@ public:
         : str_{}
     {}
 
-    Path(const StrView& s)
+    Path(const str& s)
         : str_{s}
     {}
 
@@ -25,36 +25,36 @@ public:
 
     template<u32 N>
     Path(const char(&s)[N])
-        : str_{mkView(s)}
+        : str_{s}
     {}
 
     template<class U, class ...Us>
-    Path(StrView fmt, const U& u, const Us& ...us) {
+    Path(str fmt, const U& u, const Us& ...us) {
         sformat(str_, fmt, u, us...);
     }
 
-    NMS_API Path& operator/=(const StrView& rhs);
-    NMS_API Path& operator+=(const StrView& rhs);
+    NMS_API Path& operator/=(const str& rhs);
+    NMS_API Path& operator+=(const str& rhs);
 
-    NMS_API StrView ext()  const;
-    NMS_API StrView base() const;
-    NMS_API StrView path() const;
+    NMS_API str ext()  const;
+    NMS_API str base() const;
+    NMS_API str path() const;
 
-    operator StrView() const {
+    operator str() const {
         return str_;
     }
 
     template<class Text>
     Path operator+(const Text& ext) const {
         auto tmp(*this);
-        tmp += StrView{ ext };
+        tmp += str{ ext };
         return tmp;
     }
 
     template<class Text>
     Path operator/(const Text& ext) const {
         auto tmp(*this);
-        tmp /= StrView{ ext };
+        tmp /= str{ ext };
         return tmp;
     }
 

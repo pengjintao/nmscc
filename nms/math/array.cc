@@ -9,46 +9,46 @@ namespace nms::math
 nms_test(array_1d) {
     Array<f32, 1> a;// ({ 8 });
     a.resize({ 8 });
-    test::assert_eq(a.size(), { 8u });
+    test::assert_eq(a.dims, { 8u });
     a <<= vline(1.0f);
-    for (auto i = 0u; i < a.size(0); i++) {
+    for (auto i = 0u; i < a.dims[0]; i++) {
         test::assert_eq(a(i), f32(i));
     }
 
     auto b = a.dup();
-    test::assert_eq(b.size(), { 8u });
+    test::assert_eq(b.dims, { 8u });
 
-    for (auto i = 0u; i < b.size(0); i++) {
+    for (auto i = 0u; i < b.dims[0]; i++) {
         test::assert_eq(a(i), b(i));
     }
 
     b.resize({ 4 });
-    test::assert_eq(b.size(), { 4u });
+    test::assert_eq(b.dims, { 4u });
 }
 
 nms_test(array_2d) {
     Array<f32, 2> a({ 4, 8 });
-    test::assert_eq(a.size(), { 4u, 8u });
+    test::assert_eq(a.dims, { 4u, 8u });
     a <<= vline(1.0f, 0.1f);
-    for (auto i = 0u; i < a.size(0); i++) {
-        for (auto j = 0u; j < a.size(1); j++) {
+    for (auto i = 0u; i < a.dims[0]; i++) {
+        for (auto j = 0u; j < a.dims[1]; j++) {
             test::assert_eq(a(i, j), f32(i) + f32(j)*0.1f);
         }
     }
 
     auto b = a.dup();
-    test::assert_eq(b.size(), { 4u, 8u });
+    test::assert_eq(b.dims, { 4u, 8u });
 
-    for (auto i = 0u; i < b.size(0); i++) {
-        for (auto j = 0u; j < b.size(1); j++) {
+    for (auto i = 0u; i < b.dims[0]; i++) {
+        for (auto j = 0u; j < b.dims[1]; j++) {
             test::assert_eq(a(i, j), b(i, j));
         }
     }
 
     auto c = b.permute({ 1u, 0u });
-    test::assert_eq(c.size(), { b.size(1), b.size(0) });
-    for (auto i = 0u; i < b.size(0); i++) {
-        for (auto j = 0u; j < b.size(1); j++) {
+    test::assert_eq(c.dims, { b.dims[1], b.dims[0] });
+    for (auto i = 0u; i < b.dims[0]; i++) {
+        for (auto j = 0u; j < b.dims[1]; j++) {
             test::assert_eq(b(i, j), c(j, i));
         }
     }
@@ -99,9 +99,9 @@ nms_test(array_save_load) {
     a.save("nms.math.array.dat");
 
     auto b = Array<f32, 2> ::load("nms.math.array.dat");
-    test::assert_eq(a.size(), b.size());
-    for (u32 i = 0; i < a.size(0); i++) {
-        for (u32 j = 0; j < a.size(1); j++) {
+    test::assert_eq(a.dims, b.dims);
+    for (u32 i = 0; i < a.dims[0]; i++) {
+        for (u32 j = 0; j < a.dims[1]; j++) {
             test::assert_eq(a(i, j), b(i, j));
         }
     }

@@ -74,7 +74,7 @@ public:
 
         // check if out of range?
         if (bid >= $book_size) {
-            NMS_THROW(EOutOfRange<u32>{0, $book_size, bid});
+            NMS_THROW(Eoutofrange<u32>{0, $book_size, bid});
         }
 
         // check book

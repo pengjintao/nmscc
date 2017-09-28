@@ -4,43 +4,38 @@
 namespace nms
 {
 
-NMS_API StackInfo& IException::get_stackinfo() {
+NMS_API StackInfo& get_exception_stackinfo() noexcept {
     static thread_local StackInfo stack_info;
     return stack_info;
 }
 
-NMS_API void IException::set_stackinfo() {
-    auto&       global_info     = get_stackinfo();
-    StackInfo   current_info(1);
-    global_info = move(current_info);
+NMS_API void set_exception_stackinfo() noexcept {
+    auto& global_info   = get_exception_stackinfo();
+    auto  current_info  = StackInfo::backtrace(1);
+    global_info = current_info;
 }
 
-NMS_API i32 ESystem::system_error() {
+#pragma region exception: system
+
+NMS_API Esystem::Teid Esystem::_get_errno() {
     return errno;
 }
 
-NMS_API void ESystem::format(IString& buf) const {
-    U8String<512> message;
-
+NMS_API void Esystem::_get_errstr(Teid eid, char* outbuf, u32 max_cnt) {
 #if defined(NMS_OS_WINDOWS)
-    strerror_s(message.data(), message.capacity(), eid_);
+    strerror_s(outbuf, max_cnt, eid);
 #elif defined(NMS_OS_APPLE)
     // XSI Tver
-    const auto ret = strerror_r(eid_, message.data(), message.capacity());
-    if (ret != 0) {
-        return;
-    }
+    strerror_r(eid, outbuf, max_cnt);
 #elif defined(NMS_OS_UNIX)
     // GNU Tver
-    auto ptr = strerror_r(eid_, message.data(), message.capacity());
-    if (ptr != message.data()) {
+    auto ptr = strerror_r(eid, outbuf, max_cnt);
+    if (ptr != outbuf) {
         ::free(ptr);
-        return;
     }
 #endif
-    const auto message_len = strlen(message.data());
-    message._resize(message_len);
-    sformat(buf, "system error({}): {}", eid_, message);
 }
+
+#pragma endregion
 
 }

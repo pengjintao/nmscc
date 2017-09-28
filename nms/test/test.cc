@@ -8,29 +8,29 @@ using namespace nms::io;
 
 struct Testor
 {
-    StrView name;
+    str name;
     void(*func)();
 
-    bool match(const StrView& mask) const {
-        if (mask.isEmpty()) {
+    bool match(const str& mask) const {
+        if (mask.count == 0) {
             return true;
         }
 
         const auto mask_dat = mask.slice(1,  -1);
-        const auto name_dat = name.slice(0u, mask_dat.count()-1);
+        const auto name_dat = name.slice(0u, mask_dat.count-1);
         const auto stat = mask_dat == name_dat;
         return stat;
     }
 
-    bool match(const View<StrView>& masks) const {
-        if (masks.count() == 0) {
+    bool match(const View<str>& masks) const {
+        if (masks.count == 0) {
             return true;
         }
 
         auto cnt_pos = 0;
         auto cnt_neg = 0;
         for(auto& mask: masks) {
-            if (mask.isEmpty()) {
+            if (mask.count == 0) {
                 continue;
             }
             auto c = mask[0];
@@ -51,10 +51,10 @@ struct Testor
     }
 
     bool invoke(bool stat) const {
-        const char fmt_run[]    = "\033[1;36m[>>] {:6.3} {}\033[0m";
-        const char fmt_ok[]     = "\033[1;32m[<<] {:6.3} {}\033[0m";
-        const char fmt_fail[]   = "\033[1;31m[<<] {:6.3} {}\033[0m";
-        const char fmt_pass[]   = "\033[1;33m[--] {:6.3} {}\033[0m";
+        const char fmt_run[]    = "\033[1;36m[>>] {6.3} {}\033[0m";
+        const char fmt_ok[]     = "\033[1;32m[<<] {6.3} {}\033[0m";
+        const char fmt_fail[]   = "\033[1;31m[<<] {6.3} {}\033[0m";
+        const char fmt_pass[]   = "\033[1;33m[--] {6.3} {}\033[0m";
         if (!stat) {
             console::writeln(fmt_pass, clock(), name);
             return false;
@@ -66,10 +66,10 @@ struct Testor
             console::writeln(fmt_ok, clock(), name);
             return true;
         }
-        catch (const IException& e) {
+        catch (const Iexception& e) {
             auto& type_id = typeid(e);
             log::error("throw `{}`: {}", type_id, e);
-            auto& stacks = IException::get_stackinfo();
+            auto& stacks = get_exception_stackinfo();
             console::writeln("{}", stacks);
             console::writeln(fmt_fail, clock(), name);
             return false;
@@ -86,7 +86,7 @@ static auto& gTests() {
     return tests;
 }
 
-NMS_API u32 install(StrView name, void(*func)()) {
+NMS_API u32 install(str name, void(*func)()) {
     static auto& gtests = gTests();
 
     // sizeof("struct ") = 7
@@ -104,7 +104,7 @@ NMS_API u32 install(StrView name, void(*func)()) {
     return 0;
 }
 
-NMS_API u32 invoke(const View<StrView>& masks) {
+NMS_API u32 invoke(const View<str>& masks) {
     auto&   tests = gTests();
 
     List<const Testor*, 256> failes;
@@ -128,7 +128,7 @@ NMS_API u32 invoke(const View<StrView>& masks) {
         const auto now = DateTime::now();
         char buff[128];
         auto len = snprintf(buff, sizeof(buff), "%04hu-%02hu-%02hu %02hu:%02hu:%02hu", now.year, now.month, now.day, now.hour, now.minute, now.second);
-        auto msg = StrView{ buff, u32(len) };
+        auto msg = str{ buff, u32(len) };
         io::log::info("{}", msg);
     }
 
@@ -157,10 +157,10 @@ NMS_API u32 invoke(const View<StrView>& masks) {
     console::writeln("\033[1;33m[**]\033[0m ignore: {}", ignore_count);
     console::writeln("\033[1;31m[!!]\033[0m fail:   {}", fail_count);
 
-    for (auto i = 0u; i < failes.count(); ++i) {
+    for (auto i = 0u; i < failes.count; ++i) {
         auto& test = failes[i];
 
-        if (i + 1 < failes.count()) {
+        if (i + 1 < failes.count) {
             console::writeln("  \033(0tq\033(B{}", test->name);
         }
         else {
