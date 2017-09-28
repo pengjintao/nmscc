@@ -9,6 +9,8 @@ namespace nms
 #pragma region format: pre-define
 struct FormatStyle;
 
+NMS_API void _sformat_val(IString& buf, const FormatStyle& style, str  val);
+
 template<typename T>
 void sformat(IString& outbuf, const FormatStyle& style, const T& value);
 #pragma endregion
@@ -88,12 +90,7 @@ struct View
     friend struct View;
 
     /*! type-info */
-    constexpr static Tinfo $info ={
-        '$',
-        $is<$uint, T> ? 'u' : $is<$sint, T> ? 'i' : $is<$float, T> ? 'f' : '?',
-        char('0' + sizeof(T)),
-        char('0' + N)
-    };
+    static Tinfo $info;
 
 #pragma endregion
 
@@ -103,9 +100,6 @@ struct View
         : data_{nullptr}, dims_{0}, step_{0}
     { }
 
-    /*! default destructor */
-    ~View() = default;
-
     /*! construct view with data, size, step */
     constexpr View(Tdata* data, const Tdims& size, const Tidxs& step) noexcept
         : data_{ data }, dims_{ size }, step_(step)
@@ -113,7 +107,7 @@ struct View
 
      /*! construct view with data, size */
     constexpr View(Tdata* data, const Tdims& size) noexcept
-        : data_{ data }, dims_{ size }, step_{ _make_step_from_size(size.data) }
+        : data_{ data }, dims_{ size }, step_{ _make_step_from_dims(size.data) }
     {}
 
     /*! construct view with data, size, step */
@@ -123,7 +117,7 @@ struct View
 
     /*! construct view with data, size */
     constexpr View(Tdata* data, const Tsize(&size)[$rank]) noexcept
-        : data_{ data }, dims_{ Tdims::from_array(size) }, step_{ _make_step_from_size(size) }
+        : data_{ data }, dims_{ Tdims::from_array(size) }, step_{ _make_step_from_dims(size) }
     {}
 
     /*! convert to const View */
@@ -166,7 +160,7 @@ struct View
     __declspec(property(get=get_count)) Tsize count;
 
     Tsize get_count() const noexcept {
-        return iprod($index_seq<$rank>, dims_);
+        return idx_prod(Tindex_seq<$rank>{}, dims_);
     }
 
 
@@ -180,7 +174,7 @@ struct View
     __forceinline const Tdata& at(Tidx ...idx) const noexcept {
         static_assert($all_is<$int,Tidx...>,    "unexpect type");
         static_assert(sizeof...(Tidx)==$rank,   "unexpect arguments count");
-        return data_[_offset_of_dims($index_seq<$rank>, idx...)];
+        return data_[_offset_of_dims(Tindex_seq<$rank>{}, idx...)];
     }
 
     /*!
@@ -190,7 +184,7 @@ struct View
     __forceinline Tdata& at(Tidx ...idx) noexcept {
         static_assert($all_is<$int, Tidx...>,  "unexpect type");
         static_assert(sizeof...(Tidx)==$rank,  "unexpect arguments count");
-        return data_[_offset_of_dims($index_seq<$rank>, idx...)];
+        return data_[_offset_of_dims(Tindex_seq<$rank>{}, idx...)];
     }
 
     /*!
@@ -355,13 +349,13 @@ protected:
 
 
 private:
-    static constexpr Tidxs _make_step_from_size(const Tsize(&size)[$rank]) noexcept {
-        return _make_step_from_dims_seq($index_seq<$rank>, size);
+    static constexpr Tidxs _make_step_from_dims(const Tsize(&dims)[$rank]) noexcept {
+        return _make_step_from_dims_seq(Tindex_seq<$rank>{}, dims);
     }
 
     template<u32 ...Idim>
-    static constexpr Tidxs _make_step_from_dims_seq(Tu32<Idim...>, const Tsize(&size)[$rank]) noexcept {
-        return { Tstep(iprod($index_seq<Idim>, size))... };
+    static constexpr Tidxs _make_step_from_dims_seq(Tu32<Idim...>, const Tsize(&dims)[$rank]) noexcept {
+        return { Tstep(idx_prod(Tindex_seq<Idim>{}, dims))... };
     }
 
     template<typename Tbuff, typename Tstyle>
@@ -384,7 +378,9 @@ private:
 
         outbuf += "\n";
         for (Tsize nx = 0; nx < view_dims[0]; nx++) {
-            nms::sformat(outbuf, FormatStyle{ '>', 0, 3, 0 }, nx);
+            // format line-number
+            nms::sformat(outbuf, FormatStyle::fmt_uint_with_width('>', 3), nx);
+
             outbuf += "| ";
             for (Tsize ny = 0; ny < view_dims[1]; ny++) {
                 const auto& val = view(nx, ny);
@@ -409,12 +405,7 @@ struct View<T, 0>
     using Tinfo = ViewInfo;
 
     /*! type-info */
-    constexpr static Tinfo $info ={
-        '$',
-        $is<$uint, T> ? 'u' : $is<$sint, T> ? 'i' : $is<$float, T> ? 'f' : '?',
-        char('0' + sizeof(T)),
-        char('0' + 0)
-    };
+    static Tinfo $info;
 
     template<typename U, u32 M>
     friend struct View;
@@ -424,10 +415,6 @@ struct View<T, 0>
     /* default constructor */
     __forceinline constexpr View() noexcept
         : data_{nullptr}, size_{0}, capacity_{0}
-    { }
-
-    /* default destructor */
-    __forceinline ~View()
     { }
 
     /*! construct view with data, size*/
@@ -636,7 +623,7 @@ struct View<T, 0>
 
 #pragma region format
     void sformat(IString& buf, const FormatStyle& style) const {
-        _sformat(buf, style);
+        this->_sformat(buf, style, data_, size_);
     }
 #pragma endregion
 
@@ -657,13 +644,17 @@ protected:
         return s1 - s0 + 1;
     }
 
-    template<typename Tbuff, typename Tstyle>
-    void _sformat(Tbuff& outbuf, const Tstyle& style) const {
+    static void _sformat(IString& outbuf, const FormatStyle& style, const char dat[], Tsize cnt) {
+        nms::_sformat_val(outbuf, style, str{ dat, cnt });
+    }
+
+    template<typename U>
+    static void _sformat(IString& outbuf, const FormatStyle& style, const U dat[], Tsize cnt) {
         outbuf += '[';
 
-        for (Tsize i = 0u; i < this->size_; ++i) {
-            nms::sformat(outbuf, style, data_[i]);
-            if (i + 1 != this->size_) {
+        for (Tsize i = 0u; i < cnt; ++i) {
+            nms::sformat(outbuf, style, dat[i]);
+            if (i + 1 != cnt) {
                 outbuf += ", ";
             }
         }
@@ -671,5 +662,15 @@ protected:
         outbuf += ']';
     }
 };
+
+#pragma region view impls
+template<typename T, u32 N>
+typename View<T,N>::Tinfo View<T,N>::$info = {
+    '$',
+    $is<$uint, T> ? 'u' : $is<$sint, T> ? 'i' : $is<$float, T> ? 'f' : '?',
+    char('0' + sizeof(T)),
+    char('0' + N)
+};
+#pragma endregion
 
 }

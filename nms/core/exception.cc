@@ -10,9 +10,9 @@ NMS_API StackInfo& get_exception_stackinfo() noexcept {
 }
 
 NMS_API void set_exception_stackinfo() noexcept {
-    auto&       global_info     = get_exception_stackinfo();
-    StackInfo   current_info(1);
-    global_info = move(current_info);
+    auto& global_info   = get_exception_stackinfo();
+    auto  current_info  = StackInfo::backtrace(1);
+    global_info = current_info;
 }
 
 #pragma region exception: system

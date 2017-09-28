@@ -76,12 +76,14 @@ template<u32 N, class T=u32, T t=0> using Trep = typename _Trep<N, T, t>::U;
 #pragma endregion
 
 #pragma region index_seq
-template<u32 N> using Tindex_seq = __make_integer_seq<Tval, u32, N>;
+/*! alias Tu32<0, ... N-1> */
+template<u32 N>
+using Tindex_seq = __make_integer_seq<Tval, u32, N>;
 
-namespace
-{
-template<u32 N> constexpr auto $index_seq = __make_integer_seq<Tval, u32, N>{};
-}
+/*! Tu32<0, ... N-1>{} */
+template<u32 N>
+static const     auto $index_seq = Tindex_seq<N>{};
+
 #pragma endregion
 
 #pragma region idx op
@@ -97,13 +99,13 @@ constexpr auto idx_sum(Tu32<I...>, const V& v) {
 }
 
 template<class V>
-constexpr auto iprod(Tu32<>, const V& v) {
+constexpr auto idx_prod(Tu32<>, const V& v) {
     (void)v;
     return decltype(v[0]){1};
 }
 
 template<u32 ...I, class V>
-constexpr auto iprod(Tu32<I...>, const V& v) {
+constexpr auto idx_prod(Tu32<I...>, const V& v) {
     return prod(v[I]...);
 }
 #pragma endregion

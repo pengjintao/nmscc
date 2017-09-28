@@ -73,14 +73,14 @@ static auto dladdr(void* handle, Dl_info* info) {
 namespace nms
 {
 
-NMS_API void StackInfo::init() {
-    auto cnt = nms::numel(stacks_);
-    auto ret = backtrace(stacks_, i32(cnt));
-    count_ = u32(ret);
+NMS_API void StackInfo::_backtrace() {
+    const auto cnt = this->$capacity;
+    const auto ret = ::backtrace(_stacks, i32(cnt));
+    this->_count   = u32(ret);
 }
 
 NMS_API void StackInfo::Frame::sformat(IString& buff) const {
-    if (ptr == nullptr) {
+    if (this->ptr == nullptr) {
         buff += str("<null>");
         return;
     }
@@ -90,12 +90,12 @@ NMS_API void StackInfo::Frame::sformat(IString& buff) const {
         char    buff[512];
     } info_ext;
 
-    auto ret = dladdr(ptr, &info_ext.info);
+    const auto ret = dladdr(this->ptr, &info_ext.info);
     if (ret == 0) {
         buff += str("<unknow>");
         return;
     }
-    auto name = str{ info_ext.info.dli_sname, u32(strlen(info_ext.info.dli_sname)) };
+    const auto name = str{ info_ext.info.dli_sname, u32(strlen(info_ext.info.dli_sname)) };
 
 #ifdef NMS_CC_MSVC
     buff += name;
@@ -122,10 +122,10 @@ NMS_API void StackInfo::Frame::sformat(IString& buff) const {
 }
 
 NMS_API void StackInfo::sformat(IString& buff) const {
-    auto cnt = count();
+    const auto cnt = this->count;
 
     for (u32 i = 0; i < cnt; ++i) {
-        auto stack = (*this)[i];
+        const auto stack = (*this)[i];
         i + 1 < cnt
             ? nms::sformat(buff, "\t\033(0tq\033(B{:2}: {}\n", i, stack)
             : nms::sformat(buff, "\t\033(0mq\033(B{:2}: {}\n", i, stack);
@@ -134,8 +134,8 @@ NMS_API void StackInfo::sformat(IString& buff) const {
 
 #pragma region unittest
 nms_test(stacktrace) {
-    StackInfo stacks;
-    io::log::info("stacks = \n{}", stacks);
+    auto stack_info = StackInfo::backtrace();
+    io::log::info("stacks = \n{}", stack_info);
 }
 #pragma endregion
 

@@ -11,7 +11,7 @@ class CondVar
 {
 public:
     CondVar()
-        : _fobj{}
+        : _thrd{}
     {
         init();
     }
@@ -33,7 +33,7 @@ public:
     NMS_API int wait(Mutex& lock);
 
 private:
-    cnd_t _fobj;
+    cnd_t _thrd;
 };
 
 }

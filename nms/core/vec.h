@@ -12,6 +12,7 @@ template<class T>
 struct Vec<T, 0>
 {
     static constexpr auto $size  = 0;
+    static constexpr auto $count = 0;
     T data;
 
     template<typename I> __forceinline T&       operator[] (I)       noexcept { return data; }
@@ -23,6 +24,7 @@ template<typename T, u32 N>
 struct Vec<T, N>
 {
     static constexpr auto $size  = N;
+    static constexpr auto $count = N;
     T data[$size];
 
     template<typename I> __forceinline T&       operator[] (I idx)       noexcept { return data[idx]; }
@@ -42,7 +44,7 @@ struct Vec<T, N>
     void sformat(Tbuff& outbuf, const Tstyle& style) const {
         outbuf += '[';
 
-        for (u32 i = 0u; i < $count; ++i) {
+        for (u32 i = 0u; i < $size; ++i) {
             nms::sformat(outbuf, style, data[i]);
             if (i + 1 != $count) {
                 outbuf += ", ";

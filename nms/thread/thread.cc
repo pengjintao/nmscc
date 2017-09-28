@@ -60,46 +60,46 @@ extern "C" {
 namespace nms::thread
 {
 
-NMS_API void Thread::start(thrd_ret_t(*pfun)(void*), void* pobj) {
-    if (_fobj != thrd_t(0)) {
+NMS_API void Ithread::_start(thrd_ret_t(*pfun)(void*), void* pobj) {
+    if (_thrd != thrd_t(0)) {
         return;
     }
-    auto ret = thrd_create(&_fobj, pfun, pobj);
+    auto ret = thrd_create(&_thrd, pfun, pobj);
 
-    if (_fobj == thrd_t(0) && ret == 0) {
+    if (_thrd == thrd_t(0) && ret == 0) {
         io::log::error("nms.thread.Thread.start : start thread failed.");
     } else {
-        io::log::debug("nms.thread.Thread.start : {}", _fobj);
+        io::log::debug("nms.thread.Thread.start : {}", u64(_thrd) );
     }
 }
 
-NMS_API int Thread::detach() {
-    if (_fobj == thrd_t(0) ) {
+NMS_API int Ithread::detach() {
+    if (_thrd == thrd_t(0) ) {
         return 0;
     }
 
-    io::log::debug("nms.thread.Thread.detach: {}", _fobj);
-    auto ret = thrd_detach(_fobj);
-    _fobj = thrd_t(0);
+    io::log::debug("nms.thread.Thread.detach: {}", u64(_thrd) );
+    auto ret = thrd_detach(_thrd);
+    _thrd = thrd_t(0);
     return ret;
 }
 
-NMS_API int Thread::join() {
-    if (_fobj == thrd_t(0) ) {
+NMS_API int Ithread::join() {
+    if (_thrd == thrd_t(0) ) {
         return 0;
     }
 
-    io::log::debug("nms.thread.Thread.join  : {}", _fobj);
-    auto ret = thrd_join(_fobj, nullptr);
-    _fobj = thrd_t(0);
+    io::log::debug("nms.thread.Thread.join  : {}", u64(_thrd) );
+    auto ret = thrd_join(_thrd, nullptr);
+    _thrd = thrd_t(0);
     return ret;
 }
 
-NMS_API void Thread::yield() {
+NMS_API void Ithread::yield() {
     thrd_yeild();
 }
 
-NMS_API int Thread::sleep(double duration) {
+NMS_API int Ithread::sleep(double duration) {
     system::sleep(duration);
     return 0;
 }

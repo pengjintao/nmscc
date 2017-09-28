@@ -11,15 +11,19 @@ namespace nms
 
 struct FormatStyle
 {
-    char align   = '\0';    // [<>=^]?
-    char sign    = '\0';    // [+- ]?
-    u8   width   = 0;       // [0-9]*
-    u8   prec    = 0;       // [0-9]*
+    char align      = '\0';     // [<>=^]?
+    char sign       = '\0';     // [+- ]?
+    u8   width      = 0;        // [0-9]*
+    u8   prec       = 0;        // [0-9]*
 
-    union {
-        char type   = '\0';
-        char spec[12];
-    };
+    char type       = '\0';     // [a-z]?
+    char spec[11]   = {};
+
+    static FormatStyle fmt_uint           (char align)              { FormatStyle style; style.align = align;                          return style; }
+    static FormatStyle fmt_uint_with_width(char align, u32 width)   { FormatStyle style; style.align = align; style.width = u8(width); return style; }
+
+    static FormatStyle fmt_sint           (char align)              { FormatStyle style; style.align = align; style.sign = '+';                          return style; }
+    static FormatStyle fmt_sint_with_width(char align, u32 width)   { FormatStyle style; style.align = align; style.sign = '+'; style.width = u8(width); return style; }
 
     NMS_API static FormatStyle from_fmt_str(const str& str);
 };
@@ -72,7 +76,40 @@ auto match_version(IString& outbuf, const FormatStyle& /*style*/, const T& value
 
 /*! redirect: reflect_format */
 template<class T>
-auto match_version(IString& outbuf, const FormatStyle& style, const T& value, Tver<2>) -> decltype(T::_$member_cnt) {
+struct Tmatch_reflect {
+    void _format(IString& outbuf, const FormatStyle& style, const T& object) const {
+        _format_idx(outbuf, style, object, Tu32<0>{}, Tu32<T::_$member_cnt>{});
+    }
+private:
+    template<u32 Idx>
+    void _format_idx(IString& outbuf, const FormatStyle& style, const T& object, Tu32<Idx>, Tu32<1>) const {
+        this->_format_member<Idx>(outbuf, style, object);
+    }
+
+    template<u32 Idx, u32 Iver>
+    void _format_idx(IString& outbuf, const FormatStyle& style, const T& object, Tu32<Idx>, Tu32<Iver>) const {
+        this->_format_member<Idx>(outbuf, style, object);
+        this->_format_idx(outbuf, style, object, Tu32<Idx + 1>{}, Tu32<Iver - 1>{});
+    }
+
+    template<u32 Idx>
+    void _format_member(IString& outbuf, const FormatStyle& style, const T& object) const {
+        using Tmember = typename Tmembers<T>::type<Idx>;
+        const auto  name  = Tmember::name();
+        const auto& value = Tmember::value(object);
+
+        outbuf += '\n';
+        outbuf += '\t';
+        outbuf += name;
+        outbuf += ':';
+        outbuf += '\t';
+        match_version(outbuf, style, value, Tver<9>{});
+    }
+};
+
+template<class T>
+auto match_version(IString& outbuf, const FormatStyle& style, const T& object, Tver<2>) -> decltype(T::_$member_cnt) {
+    Tmatch_reflect<T>{}._format(outbuf, style, object);
     return 0;
 }
 
@@ -113,12 +150,13 @@ void sformat(IString& outbuf, const FormatStyle& style, const T& value) {
 
 template<class ...Targs>
 void sformat(IString& outbuf, str strfmt, const Targs& ...args) {
-    i32 argid = 0;
+    auto argid  = i32(0);
+    auto valfmt = str();
 
-    str valfmt;
     while (ns_format::next_value(outbuf, strfmt, valfmt)) {
         auto style = FormatStyle::from_fmt_str(valfmt);
         ns_format::match_index(outbuf, style, argid, args...);
+        ++argid;
     }
 }
 
@@ -127,7 +165,7 @@ void sformat(IString& outbuf, const char(&fmt)[N], const Targs& ...args) {
     sformat(outbuf, str(fmt), args...);
 }
 
-inline IString& _format_buf() {
+inline IString& _tls_buf_for_format() {
     constexpr static auto $buff_size = 64 * 1024;   // 64K
     static thread_local U8String<$buff_size> buf;
     return buf;
@@ -136,9 +174,10 @@ inline IString& _format_buf() {
 /* format to string */
 template<class ...T>
 str format(str fmt, const T& ...t) {
-    auto& str_buf = _format_buf();
-    sformat(str_buf, fmt, t...);
-    return str_buf;
+    auto& outbuf = _tls_buf_for_format();
+    outbuf._resize(0);
+    sformat(outbuf, fmt, t...);
+    return outbuf;
 }
 
 

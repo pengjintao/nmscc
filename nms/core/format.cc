@@ -284,10 +284,20 @@ NMS_API FormatStyle FormatStyle::from_fmt_str(const str& fmt) {
     }
 
     // parse: type
-    for (auto k = 0; k < 4 && i < sizeof(ret.spec); ++k, ++i) {
-        ret.spec[k] = fmt[i];
+    if (i < n) {
+        ret.type = fmt[i];
+        ++i;
     }
 
+    // parse: spec
+    if (i < n && fmt[i] == ':') {
+        i++;
+
+        auto capicity = u32(sizeof(ret.spec));
+        for (auto k = 0u; k < capicity && i < n; ++k, ++i) {
+            ret.spec[k] = fmt[i];
+        }
+    }
     return ret;
 }
 
@@ -332,19 +342,15 @@ NMS_API bool next_value(IString& outbuf, str& strfmt, str& valfmt) {
     //2. find }
     u32 pos_end =pos_beg + 1;
     while (pos_end < fmt_len) {
-        const auto c = strfmt[pos_beg];
+        const auto c = strfmt[pos_end];
 
         if (c == '}') {
             if (pos_end + 1 < fmt_len && strfmt[pos_end + 1] == '}') {
-                outbuf += '}';
                 ++pos_end;
             }
             else {
                 break;
             }
-        }
-        else {
-            outbuf += c;
         }
         ++pos_end;
     }

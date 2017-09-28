@@ -72,7 +72,7 @@ class TestTask
 {
 public:
     explicit TestTask(char id)
-        : ITask(format("{:c}", id))
+        : ITask(format("{c}", id))
     {}
 
     TestTask(const TestTask&)               = delete;

@@ -142,7 +142,7 @@ static bool _parse_int(str& text, const str& fmt, T& val) {
 }
 
 template<class T>
-static bool _parse_float(str& text, str fmt, T& val) {
+static bool _parse_float(str& text, str /*fmt*/, T& val) {
     int int_part        = 0;
     int decimal_part    = 0;
     int exponent_part   = 0;

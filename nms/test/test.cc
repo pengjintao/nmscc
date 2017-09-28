@@ -51,10 +51,10 @@ struct Testor
     }
 
     bool invoke(bool stat) const {
-        const char fmt_run[]    = "\033[1;36m[>>] {:6.3} {}\033[0m";
-        const char fmt_ok[]     = "\033[1;32m[<<] {:6.3} {}\033[0m";
-        const char fmt_fail[]   = "\033[1;31m[<<] {:6.3} {}\033[0m";
-        const char fmt_pass[]   = "\033[1;33m[--] {:6.3} {}\033[0m";
+        const char fmt_run[]    = "\033[1;36m[>>] {6.3} {}\033[0m";
+        const char fmt_ok[]     = "\033[1;32m[<<] {6.3} {}\033[0m";
+        const char fmt_fail[]   = "\033[1;31m[<<] {6.3} {}\033[0m";
+        const char fmt_pass[]   = "\033[1;33m[--] {6.3} {}\033[0m";
         if (!stat) {
             console::writeln(fmt_pass, clock(), name);
             return false;

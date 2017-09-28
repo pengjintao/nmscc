@@ -57,8 +57,7 @@ static const char $bg_cyn[] = "\033[46m";
 static const char $bg_wht[] = "\033[47m";
 }
 
-/*! console string buffer */
-NMS_API IString& _tls_strbuf();
+
 
 NMS_API void writes(const str texts[], u32 n);
 
@@ -76,9 +75,15 @@ inline void  writeln(const str& text) {
     writes(texts, 2);
 }
 
+/*! console string buffer */
+inline IString& _tls_buf_for_write() {
+    static thread_local U8String<4 * 1024 * 1024> buf;   // 4 MB
+    return buf;
+}
+
 template<class T, class ...U>
 void write(const str& fmt, const T& t, const U& ...u) {
-    auto& buf = _tls_strbuf();
+    auto& buf = _tls_buf_for_write();
     buf._resize(0);
     sformat(buf, fmt, t, u...);
     write(buf);
@@ -86,7 +91,7 @@ void write(const str& fmt, const T& t, const U& ...u) {
 
 template<class T, class ...U>
 void writeln(const str& fmt, const T& t, const U& ...u) {
-    auto& buf = _tls_strbuf();
+    auto& buf = _tls_buf_for_write();
     buf._resize(0u);
     sformat(buf, fmt, t, u...);
     buf += '\n';

@@ -31,28 +31,28 @@ NMS_API void IFile::reopen(const Path& path, FileMode mode) {
         NMS_THROW(Esystem{errno});
     }
 
-    _fobj = ret;
+    _thrd = ret;
 }
 
 NMS_API void IFile::close() {
-    if (_fobj == nullptr) {
+    if (_thrd == nullptr) {
         return;
     }
-    ::fclose(_fobj);
-    _fobj = nullptr;
+    ::fclose(_thrd);
+    _thrd = nullptr;
 }
 
 
 NMS_API void IFile::flush() const {
-    if (_fobj == nullptr) {
+    if (_thrd == nullptr) {
         return;
     }
-    ::fflush(_fobj);
+    ::fflush(_thrd);
 }
 
 NMS_API IFile::Tid IFile::get_id() const {
 #ifdef NMS_OS_WINDOWS
-    auto fid = ::_fileno(_fobj);
+    auto fid = ::_fileno(_thrd);
 #else
     auto fid = ::fileno(_fobj);
 #endif
@@ -60,7 +60,7 @@ NMS_API IFile::Tid IFile::get_id() const {
 }
 
 NMS_API IFile::Tsize IFile::get_size() const {
-    if (_fobj == nullptr) {
+    if (_thrd == nullptr) {
         return 0;
     }
 
@@ -70,18 +70,18 @@ NMS_API IFile::Tsize IFile::get_size() const {
 }
 
 NMS_API IFile::Tsize IFile::_read(void* dat, Tsize size, Tsize count) const {
-    if (_fobj == nullptr || size == 0 || count == 0) {
+    if (_thrd == nullptr || size == 0 || count == 0) {
         return 0;
     }
-    const auto ret = ::fread(dat, size, count, _fobj);
+    const auto ret = ::fread(dat, size, count, _thrd);
     return ret;
 }
 
 NMS_API IFile::Tsize IFile::_write(const void* dat, Tsize size, Tsize n) {
-    if (_fobj == nullptr || size == 0 || n == 0) {
+    if (_thrd == nullptr || size == 0 || n == 0) {
         return 0;
     }
-    const auto ret = ::fwrite(dat, size, n, _fobj);
+    const auto ret = ::fwrite(dat, size, n, _thrd);
     return ret;
 }
 #pragma endregion

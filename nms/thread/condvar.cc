@@ -63,23 +63,23 @@ namespace nms::thread
 {
 
 NMS_API int CondVar::init() {
-    return cnd_init(&_fobj);
+    return cnd_init(&_thrd);
 }
 
 NMS_API int CondVar::destroy() {
-    return cnd_destroy(&_fobj);
+    return cnd_destroy(&_thrd);
 }
 
 NMS_API int CondVar::signal() noexcept {
-    return cnd_signal(&_fobj);
+    return cnd_signal(&_thrd);
 }
 
 NMS_API int CondVar::broadcast() noexcept {
-    return cnd_brodcast(&_fobj);
+    return cnd_brodcast(&_thrd);
 }
 
 NMS_API int CondVar::wait(Mutex& mutex) {
-    return cnd_wait(&_fobj, &mutex._fobj);
+    return cnd_wait(&_thrd, &mutex._thrd);
 }
 
 }

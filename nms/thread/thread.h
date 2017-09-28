@@ -6,18 +6,50 @@
 namespace nms::thread
 {
 
-class Thread final
+#ifdef NMS_OS_UNIX
+using   thrd_ret_t = void*;
+#else
+using   thrd_ret_t = void;
+#endif
+
+struct Ithread
+{
+    thrd_t  _thrd = thrd_t(0);
+
+    NMS_API int join();
+    NMS_API int detach();
+
+    NMS_API static void yield();
+    NMS_API static int  sleep(double duration);
+
+protected:
+    NMS_API void _start(thrd_ret_t(*pfun)(void*), void* pobj);
+};
+
+class Thread final: public Ithread
 {
 public:
-#ifdef NMS_OS_UNIX
-    using   thrd_ret_t = void*;
-#else
-    using   thrd_ret_t = void;
-#endif
     constexpr static auto $buff_size = 64;
 
     template<class Tfunc>
     explicit Thread(Tfunc&& func) {
+        start(fwd<Tfunc>(func));
+    }
+
+    virtual ~Thread() {
+        detach();
+    }
+
+    Thread(Thread&&)                    = delete;
+    Thread(const Thread&)               = delete;
+    Thread& operator=(Thread&&)         = delete;
+    Thread& operator=(const Thread&)    = delete;
+
+private:
+    u64     buff_[$buff_size/sizeof(u64)];
+
+    template<class Tfunc>
+    void start(Tfunc&& func) {
         using Tobj = Tvalue<Tmutable<Tfunc>>;
         static_assert(sizeof(Tobj) <= sizeof(buff_), "nms::thread::Thread: `func` size is to large");
 
@@ -33,38 +65,16 @@ public:
         #endif
         };
 
-        start(pfun, pobj);
+        Ithread::_start(pfun, pobj);
     }
-
-    virtual ~Thread() {
-        detach();
-    }
-
-    Thread(Thread&&)                    = delete;
-    Thread(const Thread&)               = delete;
-    Thread& operator=(Thread&&)         = delete;
-    Thread& operator=(const Thread&)    = delete;
-
-public:
-    NMS_API int join();
-    NMS_API int detach();
-
-    NMS_API static void yield();
-    NMS_API static int  sleep(double duration);
-
-protected:
-    thrd_t  _fobj   = thrd_t(0);
-    u64     buff_[$buff_size/sizeof(u64)];
-
-    NMS_API void start(thrd_ret_t(*pfun)(void*), void* pobj);
 };
 
 inline void yield() {
-    Thread::yield();
+    Ithread::yield();
 }
 
 inline void sleep(double seconds) {
-    Thread::sleep(seconds);
+    Ithread::sleep(seconds);
 }
 
 }

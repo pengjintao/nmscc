@@ -130,7 +130,7 @@ struct Reduce<F, T>
     __declspec(property(get=get_dims)) Tdims dims;
 
     Tdims get_dims() const noexcept {
-        return Reduce::_make_dims($index_seq<$rank>, vt.dims);
+        return Reduce::_make_dims(Tindex_seq<$rank>{}, vt.dims);
     }
 
     template<typename ...I>
@@ -186,7 +186,7 @@ struct Vline
     template<typename ...Tidx>
     Tdata operator()(Tidx ...idxs) const {
         static_assert(sizeof...(Tidx) == $rank,   "unexpect arguments count, should be `$rank`");
-        return get_offsets($index_seq<$rank>, idxs...);
+        return get_offsets(Tindex_seq<$rank>{}, idxs...);
     }
 
 private:

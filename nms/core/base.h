@@ -147,6 +147,8 @@ struct TypeId
     using Tname = const str&;
     using Tfunc = Tname(*)();
 
+    Tfunc _func_get_name;
+
 #pragma region constructors
     template<typename T>
     constexpr static TypeId make() {
@@ -156,35 +158,33 @@ struct TypeId
 
 #pragma region property
     Tname get_name() const {
-        return func_get_name_();
+        return _func_get_name();
     }
     __declspec(property(get=get_name)) Tname name;
 #pragma endregion
 
 #pragma region operator
     constexpr friend bool operator==(TypeId x, TypeId y) {
-        return x.func_get_name_ == y.func_get_name_;
+        return x._func_get_name == y._func_get_name;
     }
 
     constexpr friend bool operator!=(TypeId x, TypeId y) {
-        return x.func_get_name_ != y.func_get_name_;
+        return x._func_get_name != y._func_get_name;
     }
 #pragma endregion
 
 private:
-    Tfunc func_get_name_;
-
     constexpr TypeId(Tfunc func)
-        : func_get_name_(func)
+        : _func_get_name(func)
     { }
 
     template<typename T>
     static Tname func_get_name() {
     #if defined(NMS_CC_MSVC)
-        static constexpr u32 funcsig_head_size_ = u32(sizeof("struct nms::View<char const ,0> __cdecl nms::Type::_get_name<")) - 1;
+        static constexpr u32 funcsig_head_size_ = u32(sizeof("const struct nms::View<char const, 0> &__cdecl nms::TypeId::func_get_name<")) - 1;
         static constexpr u32 funcsig_tail_size_ = u32(sizeof(">(void)")) - 1;
     #elif defined(NMS_CC_CLANG)
-        static constexpr u32 funcsig_head_size_ = u32(sizeof("static nms::View<const char> nms::Type::_get_name() [T = ")) - 1;
+        static constexpr u32 funcsig_head_size_ = u32(sizeof("static const nms::View<const char>& nms::Type::_func_get_name() [T = ")) - 1;
         static constexpr u32 funcsig_tail_size_ = u32(sizeof("]")) - 1;
     #else
     #   error("unknow c++ compiler")

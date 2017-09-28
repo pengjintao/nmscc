@@ -83,9 +83,11 @@ public:
 
     /*! clear all elements */
     void clear() {
-        // clear
-        for (Tsize i = 0; i < base::size_; ++i) {
-            base::data_[i].~Tdata();
+        // check: if not POD, call destructors
+        if (!$is<$pod, T>) {
+            for (Tsize i = 0; i < base::size_; ++i) {
+                base::data_[i].~Tdata();
+            }
         }
         base::size_ = 0;
     }

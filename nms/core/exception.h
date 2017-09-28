@@ -5,7 +5,8 @@
 
 namespace nms
 {
-class StackInfo;
+
+struct StackInfo;
 
 template<u32 N, class ...Targs>
 void sformat(IString& outbuf, const char(&fmt)[N], const Targs& ...args);

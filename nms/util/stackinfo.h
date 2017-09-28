@@ -5,44 +5,67 @@
 namespace nms
 {
 
-class StackInfo
+struct StackInfo
 {
+#pragma region data
+    constexpr static u32 $capacity = 64;
+
+    void*   _stacks[$capacity];
+    u32     _count = 0;
+#pragma endregion
+
+#pragma region constructor
+private:
+    NMS_API void _backtrace();
+
 public:
+    static StackInfo backtrace() {
+        StackInfo ret;
+        ret._backtrace();
+        return ret;
+    }
+
+    static StackInfo backtrace(u32 frames_to_skip) {
+        StackInfo ret;
+        ret._backtrace();
+
+        if (ret._count >= frames_to_skip) {
+            ret._count -= frames_to_skip;
+        }
+
+        return ret;
+    }
+#pragma endregion
+
+#pragma region property
+    /*! get stack-frame count */
+    __declspec(property(get=get_count)) u32 count;
+
+    u32 get_count() const {
+        return _count;
+    }
+
+#pragma endregion
+
+#pragma region access
     struct Frame
     {
         void* ptr;
         NMS_API void sformat(IString& buf) const;
     };
 
-    /*! capture current stackinfo */
-    StackInfo(u32 num_frames_to_skip=0) {
-        init();
-
-        if (count_ > num_frames_to_skip) {
-            count_ -= num_frames_to_skip;
-        }
-    }
-
-    /*! get stack-frame count */
-    u32 count() const {
-        return count_;
-    }
-
     /*! get stack-frame */
     Frame operator[](u32 idx) const {
-        if (idx+3 >= count_) {
+        if (idx+3 >= _count) {
             return Frame{ nullptr };
         }
-        return Frame{ stacks_[idx+3] };
+        return Frame{ _stacks[idx+3] };
     }
+#pragma endregion
 
+#pragma region format
     NMS_API void sformat(IString& buf) const;
-
-protected:
-    void*   stacks_[64];
-    u32     count_ = 0;
-
-    NMS_API void init();
+#pragma endregion
 };
 
 }

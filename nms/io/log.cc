@@ -5,34 +5,33 @@
 namespace nms::io::log
 {
 
-using namespace nms::thread;
-
 Level   gLevel = Level::None;
 
-NMS_API Level getLevel() {
+NMS_API Level get_level() {
     return gLevel;
 }
 
-NMS_API void setLevel(Level level) {
+NMS_API void set_level(Level level) {
     gLevel = level;
 }
 
-NMS_API TxtFile& gLogFile() {
+NMS_API TxtFile& g_file() {
     static TxtFile file;
     return file;
 }
 
-NMS_API void setLogPath(const Path& path) {
-    gLogFile().reopen(path, FileMode::Read);
+NMS_API void set_file_path(const Path& path) {
+    g_file().reopen(path, FileMode::Read);
 }
 
-static str getConsoleColor(Level type) {
+static str get_console_color_of_level(Level type) {
     switch (type) {
         case Level::None:
             return console::$rst;
 
         case Level::Debug:
             return "";
+
         case Level::Info:
             return console::$fg_grn;
 
@@ -53,16 +52,11 @@ static str getConsoleColor(Level type) {
     }
 }
 
-NMS_API IString& _tls_strbuf() {
-    static thread_local U8String<128*1024> str;   // 128KB
-    return str;
-}
 
-NMS_API void _message(Level level, IString& msg) {
+NMS_API void logging_message(Level level, IString& msg) {
     if (level < gLevel) {
         return;
     }
-
     msg += '\n';
 
     // current process time
@@ -71,37 +65,36 @@ NMS_API void _message(Level level, IString& msg) {
 
     // 1. terminal
     {
-        const auto color    =  getConsoleColor(level);
+        const auto color    =  get_console_color_of_level(level);
+        auto& console_buff  =  console::_tls_buf_for_write();
 
-        char head[64];
-        const auto head_len = snprintf(head, sizeof(head), "%s[%s] %6.3f%s ", color.data, name.data, time, console::$rst);
+        console_buff._resize(0);
+        const auto cnt = snprintf(
+            console_buff.data, console_buff.capacity, "%s[%s] %6.3f\033[0m %.*s",
+            color.data, name.data,time, msg.count, msg.data);
 
-        if (head_len > 0 && u32(head_len) <= sizeof(head) ) {
-            const auto offset   = u32(sizeof(head)) - u32(head_len);
-            mcpy(msg.data+offset, head, head_len);
-
-            str out{msg.data+offset, msg.count-offset};
-            console::write(out);
+        if (cnt > 0 ) {
+            console_buff._resize(u32(cnt));
+            console::write(console_buff);
         }
 
         if (level >= Level::Fatal) {
-            StackInfo stack_info;
+            auto stack_info = StackInfo::backtrace();
             console::writeln("{}", stack_info);
         }
     }
 
     // 2. file
-    static auto& log_file = gLogFile();
+    static auto& log_file = g_file();
 
     if (log_file) {
-        char head[64];
-        const auto head_len = snprintf(head, sizeof(head), "[%s] %6.3f ", name.data, time);
+        static thread_local U8String<4 * 1024 * 1024> file_buff;
+        const auto cnt = snprintf(file_buff.data, file_buff.capacity, "[%s] %6.3f %.*s",
+                                       name.data, time, msg.count, msg.data);
 
-        if (head_len > 0) {
-            const auto offset   = u32(sizeof(head)) - u32(head_len);
-            mcpy(msg.data+offset, head, head_len);
-            str out{msg.data+offset, msg.count-offset};
-            log_file.write(out);
+        if (cnt > 0) {
+            file_buff._resize(u32(cnt));
+            log_file.write(file_buff);
         }
     }
 }
