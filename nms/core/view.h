@@ -9,7 +9,7 @@ namespace nms
 struct FormatStyle;
 
 template<typename Tview>
-void _sformat_view(IString& outbuf, const FormatStyle& style, const Tview& view);
+void sformat_view(IString& outbuf, const FormatStyle& style, const Tview& view);
 #pragma endregion
 
 #pragma region scalar
@@ -279,8 +279,9 @@ struct View
 #pragma endregion
 
 #pragma region format
-    void sformat(IString& buf, const FormatStyle& style) const {
-        _sformat_view(buf, style, *this);
+    template<typename Tstring>
+    void sformat(Tstring& outbuf, const FormatStyle& style) const {
+        sformat_view(outbuf, style, *this);
     }
 #pragma endregion
 
@@ -586,8 +587,9 @@ struct View<T, 0>
 #pragma endregion
 
 #pragma region format
-    void sformat(IString& buf, const FormatStyle& style) const {
-        _sformat_view(buf, style, *this);
+    template<typename Tstring>
+    void sformat(Tstring& outbuf, const FormatStyle& style) const {
+        sformat_view(outbuf, style, *this);
     }
 #pragma endregion
 

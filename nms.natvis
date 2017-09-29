@@ -100,25 +100,28 @@
   <!-- nms::serialization::Node -->
   <Type Name="nms::serialization::Node">
     <DisplayString Condition="type==0 ">null    </DisplayString>
-    <DisplayString Condition="type==1 ">{$bool}</DisplayString>
-    <DisplayString Condition="type==2 ">{$u8  }</DisplayString>
-    <DisplayString Condition="type==3 ">{$i8  }</DisplayString>
-    <DisplayString Condition="type==4 ">{$u16 }</DisplayString>
-    <DisplayString Condition="type==5 ">{$i16 }</DisplayString>
-    <DisplayString Condition="type==6 ">{$u32 }</DisplayString>
-    <DisplayString Condition="type==7 ">{$i32 }</DisplayString>
-    <DisplayString Condition="type==8 ">{$u64 }</DisplayString>
-    <DisplayString Condition="type==9 ">{$i64 }</DisplayString>
-    <DisplayString Condition="type==10">{$f32 }</DisplayString>
-    <DisplayString Condition="type==11">{$f64 }</DisplayString>
-    <DisplayString Condition="type==12">{$num, [size]s}</DisplayString>
-    <DisplayString Condition="type==13">{$str, [size]s}</DisplayString>
-    <DisplayString Condition="type==14">{$key, [size]s}=> {*(this+1)}</DisplayString>
-    <DisplayString Condition="type==15">[ size={size}]</DisplayString>
-    <DisplayString Condition="type==16">{{size={size}}}</DisplayString>
+    <DisplayString Condition="type==1 ">bool    {$bool}</DisplayString>
+    <DisplayString Condition="type==2 ">u8:     {$u8  }</DisplayString>
+    <DisplayString Condition="type==3 ">i8:     {$i8  }</DisplayString>
+    <DisplayString Condition="type==4 ">u16:    {$u16 }</DisplayString>
+    <DisplayString Condition="type==5 ">i16:    {$i16 }</DisplayString>
+    <DisplayString Condition="type==6 ">u32:    {$u32 }</DisplayString>
+    <DisplayString Condition="type==7 ">i32:    {$i32 }</DisplayString>
+    <DisplayString Condition="type==8 ">u64:    {$u64 }</DisplayString>
+    <DisplayString Condition="type==9 ">i64:    {$i64 }</DisplayString>
+    <DisplayString Condition="type==10">f32:    {$f32 }</DisplayString>
+    <DisplayString Condition="type==11">f64:    {$f64 }</DisplayString>
+    <DisplayString Condition="type==12">num:    {$num,[size]s}</DisplayString>
+    <DisplayString Condition="type==13">string: {$str, [size]s}</DisplayString>
+    <DisplayString Condition="type==14">key:    {$key, [size]s}=> {*(this+1)}</DisplayString>
+    <DisplayString Condition="type==15">time:   {$time}</DisplayString>
+    <DisplayString Condition="type==16">array:  [size={size}]</DisplayString>
+    <DisplayString Condition="type==17">object: {{size={size}}}</DisplayString>
+    
     <Expand>
       <Item Name="[key]"   Condition="type==14">$key, [size]</Item>
       <Item Name="[value]" Condition="type==14">*(this+1)</Item>
+      <Item Name="[next]"  Condition="next!=0">*(this+next)</Item>
       <LinkedListItems Condition="type==15 || type == 16">
         <HeadPointer>this+1</HeadPointer>
         <NextPointer>next == 0 ? 0 : this+next</NextPointer>

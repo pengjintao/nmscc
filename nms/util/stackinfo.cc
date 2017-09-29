@@ -55,7 +55,7 @@ static __forceinline auto backtrace(void** stacks, int count) {
     static auto sym_init    = NMS_DBGHELP_FUNC(SymInitialize);
     static auto init        = sym_init(proc, nullptr, true);  (void)init;
 
-    auto ret = RtlCaptureStackBackTrace(0u, u32(count), stacks, nullptr);
+    auto ret = RtlCaptureStackBackTrace(1u, u32(count), stacks, nullptr);
     return ret;
 }
 
@@ -79,9 +79,9 @@ NMS_API void StackInfo::_backtrace() {
     this->_count   = u32(ret);
 }
 
-NMS_API void StackInfo::Frame::sformat(IString& buff) const {
+NMS_API void StackInfo::Frame::sformat(IString& outbuf) const {
     if (this->ptr == nullptr) {
-        buff += str("<null>");
+        outbuf += str("<null>");
         return;
     }
 
@@ -92,13 +92,13 @@ NMS_API void StackInfo::Frame::sformat(IString& buff) const {
 
     const auto ret = dladdr(this->ptr, &info_ext.info);
     if (ret == 0) {
-        buff += str("<unknow>");
+        outbuf += str("<unknow>");
         return;
     }
     const auto name = str{ info_ext.info.dli_sname, u32(strlen(info_ext.info.dli_sname)) };
 
 #ifdef NMS_CC_MSVC
-    buff += name;
+    outbuf += name;
 #else
     char out_name[4096];
     size_t length = sizeof(out_name);
@@ -106,29 +106,30 @@ NMS_API void StackInfo::Frame::sformat(IString& buff) const {
     auto cxx_buff = abi::__cxa_demangle(name.data(), out_name, &length, &status);
 
     if (status == 0) {
-        buff += str{ cxx_buff, strlen(cxx_buff) };
+        outbuf += str{ cxx_buff, strlen(cxx_buff) };
 
         if (cxx_buff != out_name) {
             ::free(cxx_buff);
         }
     }
     else if (cxx_buff != nullptr) {
-        buff += str{ cxx_buff, strlen(cxx_buff) };
+        outbuf += str{ cxx_buff, strlen(cxx_buff) };
     }
     else {
-        buff += str("<empty>");
+        outbuf += str("<empty>");
     }
 #endif
 }
 
-NMS_API void StackInfo::sformat(IString& buff) const {
-    const auto cnt = this->count;
+NMS_API void StackInfo::sformat(IString& outbuf) const {
+    const auto frame_cnt = this->count;
 
-    for (u32 i = 0; i < cnt; ++i) {
-        const auto stack = (*this)[i];
-        i + 1 < cnt
-            ? nms::sformat(buff, "\t\033(0tq\033(B{:2}: {}\n", i, stack)
-            : nms::sformat(buff, "\t\033(0mq\033(B{:2}: {}\n", i, stack);
+    for (u32 frame_idx = 0; frame_idx < frame_cnt; ++frame_idx) {
+        const auto frame_info = (*this)[frame_idx];
+        nms::sformat(outbuf, "\t{2}| {}", frame_idx, frame_info);
+        if (frame_idx + 1 != frame_cnt) {
+            outbuf += "\n";
+        }
     }
 }
 

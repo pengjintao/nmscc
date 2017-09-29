@@ -17,8 +17,9 @@ struct FormatStyle
     u8   prec       = 0;        // [0-9]*
 
     char type       = '\0';     // [a-z]?
-    char spec[11]   = {};
+    char _spec[11]  = {};
 
+#pragma region constructor
     static FormatStyle fmt_uint           (char align)              { FormatStyle style; style.align = align;                          return style; }
     static FormatStyle fmt_uint_with_width(char align, u32 width)   { FormatStyle style; style.align = align; style.width = u8(width); return style; }
 
@@ -26,6 +27,16 @@ struct FormatStyle
     static FormatStyle fmt_sint_with_width(char align, u32 width)   { FormatStyle style; style.align = align; style.sign = '+'; style.width = u8(width); return style; }
 
     NMS_API static FormatStyle from_fmt_str(const str& str);
+#pragma endregion
+
+#pragma region property
+    __declspec(property(get=get_spec)) str spec;
+    str get_spec() const {
+        const auto spec_len = strlen(_spec, u32(sizeof(_spec)));
+        return { _spec, spec_len };
+    }
+#pragma endregion
+
 };
 
 NMS_API void _sformat_val(IString& buf, const FormatStyle& style, i8   val);
@@ -46,6 +57,10 @@ NMS_API void _sformat_val(IString& buf, const FormatStyle& style, str  val);
 NMS_API void _sformat_val(IString& buf, const FormatStyle& style, const std::type_info& val);
 #endif
 
+inline void _sformat_val(IString& buf, const FormatStyle& style, View<char> val) {
+    _sformat_val(buf, style, str{ val.data, val.count });
+}
+
 template<u32 N>
 void _sformat_val(IString& buf, const FormatStyle& style, const char(&val)[N]) {
     _sformat_val(buf, style, str(val));
@@ -57,6 +72,11 @@ inline void _sformat_val(IString& buf, const FormatStyle& style, const char* val
 
 namespace _ns_format
 {
+
+static u32& _indent_level() {
+    static thread_local u32 level = 0;
+    return level;
+}
 
 NMS_API bool next_value(IString& outbuf, str& strfmt, str& valfmt);
 
@@ -75,41 +95,44 @@ auto match_version(IString& outbuf, const FormatStyle& /*style*/, const T& value
 }
 
 /*! redirect: reflect_format */
-template<class T>
 struct Tmatch_reflect {
+    template<class T>
     void _format(IString& outbuf, const FormatStyle& style, const T& object) const {
-        _format_idx(outbuf, style, object, Tu32<0>{}, Tu32<T::_$member_cnt>{});
+        _indent_level() += 4;
+        _format_idx(outbuf, style, object, _indent_level(), Tu32<0>{}, Tu32<T::_$member_cnt>{});
+        _indent_level() -= 4;
     }
+
 private:
-    template<u32 Idx>
-    void _format_idx(IString& outbuf, const FormatStyle& style, const T& object, Tu32<Idx>, Tu32<1>) const {
-        this->_format_member<Idx>(outbuf, style, object);
+    template<class T, u32 Idx>
+    void _format_idx(IString& outbuf, const FormatStyle& style, const T& object, u32 indent_level, Tu32<Idx>, Tu32<1>) const {
+        this->_format_member<Idx>(outbuf, style, object, indent_level);
     }
 
-    template<u32 Idx, u32 Iver>
-    void _format_idx(IString& outbuf, const FormatStyle& style, const T& object, Tu32<Idx>, Tu32<Iver>) const {
-        this->_format_member<Idx>(outbuf, style, object);
-        this->_format_idx(outbuf, style, object, Tu32<Idx + 1>{}, Tu32<Iver - 1>{});
+    template<class T, u32 Idx, u32 Iver>
+    void _format_idx(IString& outbuf, const FormatStyle& style, const T& object, u32 indent_level, Tu32<Idx>, Tu32<Iver>) const {
+        this->_format_member<Idx>(outbuf, style, object, indent_level);
+        this->_format_idx(outbuf, style, object, indent_level, Tu32<Idx + 1>{}, Tu32<Iver - 1>{});
     }
 
-    template<u32 Idx>
-    void _format_member(IString& outbuf, const FormatStyle& style, const T& object) const {
+    template<u32 Idx, typename T>
+    void _format_member(IString& outbuf, const FormatStyle& style, const T& object, u32 indent_level) const {
         using Tmember = typename Tmembers<T>::type<Idx>;
         const auto  name  = Tmember::name();
         const auto& value = Tmember::value(object);
-
-        outbuf += '\n';
-        outbuf += '\t';
+        outbuf.appends(indent_level, ' ');
         outbuf += name;
-        outbuf += ':';
-        outbuf += '\t';
+        outbuf += ": ";
         match_version(outbuf, style, value, Tver<9>{});
+        if (Idx + 1 != Tmembers<T>::$count ) {
+            outbuf += "\n";
+        }
     }
 };
 
 template<class T>
 auto match_version(IString& outbuf, const FormatStyle& style, const T& object, Tver<2>) -> decltype(T::_$member_cnt) {
-    Tmatch_reflect<T>{}._format(outbuf, style, object);
+    Tmatch_reflect{}._format(outbuf, style, object);
     return 0;
 }
 
@@ -141,80 +164,99 @@ void match_index(IString& outbuf, const FormatStyle& style, i32 id, const T& t, 
     }
 }
 
-}
-template<class T>
-void sformat(IString& outbuf, const FormatStyle& style, const T& value) {
-    _ns_format::match_version(outbuf, style, value, Tver<9> {});
-}
-
-
-namespace _ns_format_view
-{
+#pragma region view
 
 template<class T>
-inline void match_rank(IString& outbuf, const FormatStyle& style, const T& view, Tu32<0>) {
+auto match_view_rank0(IString& outbuf, const FormatStyle& style, const T vec[], u32 count, Tver<2>) -> decltype(str{ vec, count }, 0) {
+    _sformat_val(outbuf, style, str{ vec, count });
+    return 0;
+}
 
-    const auto n = view.count;
+template<class T>
+auto match_view_rank0(IString& outbuf, const FormatStyle& style, const T vec[], u32 count, Tver<1>) -> decltype(nms::_sformat_val(outbuf, style, vec[0]), 0) {
 
     outbuf += '[';
-    for (u32 i = 0u; i < n; ++i) {
-        sformat(outbuf, style, view[i]);
-        if (i + 1 != n) {
+    for (u32 i = 0u; i < count; ++i) {
+        sformat(outbuf, style, vec[i]);
+        if (i + 1 != count) {
             outbuf += ", ";
         }
     }
     outbuf += ']';
-}
-
-inline void match_rank(IString& outbuf, const FormatStyle& style, const View<const char>& text, Tu32<0>) {
-    _sformat_val(outbuf, style, str{text.data, text.count});
-}
-
-inline void match_rank(IString& outbuf, const FormatStyle& style, const View<char>& text, Tu32<0>) {
-    _sformat_val(outbuf, style, str{text.data, text.count});
+    return 0;
 }
 
 template<class T>
-inline void match_rank(IString& outbuf, const FormatStyle& style, const T& view, Tu32<1>) {
+auto match_view_rank0(IString& outbuf, const FormatStyle& style, const T vec[], u32 count, Tver<0>) -> decltype(nms::sformat(outbuf, style, vec[0]), 0) {
+    const auto indent_level   = _ns_format::_indent_level();
+
+    _ns_format::_indent_level() += 4;
+    for (u32 i = 0u; i < count; ++i) {
+        outbuf += '\n';
+        outbuf.appends(indent_level + 4, ' ');
+        outbuf += "-:\n";
+        sformat(outbuf, style, vec[i]);
+    }
+
+    _ns_format::_indent_level() -= 4;
+    return 0;
+}
+
+template<class Tview>
+void match_view_rank(IString& outbuf, const FormatStyle& style, const Tview& view, Tu32<0>) {
+    match_view_rank0(outbuf, style, view.data, view.count, Tver<2>{});
+}
+
+template<class Tview>
+void match_view_rank(IString& outbuf, const FormatStyle& style, const Tview& view, Tu32<1>) {
     const auto linum_style = FormatStyle::fmt_uint_with_width('>', 3);
 
     const auto nx = view.size[0];
 
-    outbuf += "\n";
+    
     for (u32 i = 0u; i < nx; ++i) {
+        outbuf += "\n";
         _sformat_val(outbuf, linum_style, i);
         outbuf += "| ";
         sformat(outbuf, style, view[i]);
-        outbuf += "\n";
     }
 }
 
-template<class T>
-inline void match_rank(IString& outbuf, const FormatStyle& style, const T& view, Tu32<2>) {
+template<class Tview>
+void match_view_rank(IString& outbuf, const FormatStyle& style, const Tview& view, Tu32<2>) {
     const auto linum_style = FormatStyle::fmt_uint_with_width('>', 3);
 
     const auto nx = view.size[0];
     const auto ny = view.size[1];
 
-    outbuf += "\n";
     for (u32 i = 0u; i < nx; ++i) {
+        outbuf += "\n";
         _sformat_val(outbuf, linum_style, i);
         outbuf += "| ";
         for (u32 j = 0u; j < ny; ++j) {
             sformat(outbuf, style, view(i, j));
-            if (i + 1 != ny) {
+            if (j + 1 != ny) {
                 outbuf += ", ";
             }
         }
+
     }
 }
 
+#pragma endregion
+
+}
+
+template<class T>
+void sformat(IString& outbuf, const FormatStyle& style, const T& value) {
+    _ns_format::match_version(outbuf, style, value, Tver<9> {});
 }
 
 template<class Tview>
-inline void _sformat_view(IString& buf, const FormatStyle& style, const Tview& view) {
-    _ns_format_view::match_rank(buf, style, view, Tu32<Tview::$rank>{});
+inline void sformat_view(IString& buf, const FormatStyle& style, const Tview& view) {
+    _ns_format::match_view_rank(buf, style, view, Tu32<Tview::$rank>{});
 }
+
 
 template<class ...Targs>
 void sformat(IString& outbuf, str strfmt, const Targs& ...args) {

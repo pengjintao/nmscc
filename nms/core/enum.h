@@ -8,8 +8,7 @@ namespace nms
 #pragma region format: pre-define
 struct FormatStyle;
 
-template<typename T>
-void _sformat_val(IString& outbuf, const FormatStyle& style, const T& value);
+NMS_API void _sformat_val(IString& outbuf, const FormatStyle& style,str value);
 #pragma endregion
 
 template<class T>
@@ -23,10 +22,10 @@ struct Enum
     __declspec(property(get=get_name)) Tname name;
 
     Tname get_name() const {
-        static const auto names= _make_enum_names(static_cast<T>(0));
+        static const auto& names= _make_enum_names(static_cast<T>(0));
 
         const auto  idx = static_cast<u32>(value);
-        if (idx >= names.count) {
+        if (idx >= numel(names)) {
             return {};
         }
         const auto& val = names[idx];
@@ -58,20 +57,27 @@ struct Enum
 
 };
 
-#define _NMS_ENUM_NAME(value) #value
+#define _NMS_ENUM_NAME(value)   #value
 
-#define NMS_ENUM(type, ...)                                                 \
-enum class type { __VA_ARGS__ };                                            \
-inline nms::View<const ::nms::str> _make_enum_names(type) {                 \
-    static const ::nms::str names[] ={ NMSCPP_FOR(_NMS_ENUM_NAME, __VA_ARGS__) }; \
-    return {names};                                                         \
+#if defined(NMS_CC_MSVC) && !defined(NMS_CC_CLANG)
+#define  NMS_ENUM_NAMES(...)    _NMS_ENUM_NAMES __VA_ARGS__
+#define _NMS_ENUM_NAMES(...)    NMSCPP_FOR(_NMS_ENUM_NAME, __VA_ARGS__)
+#else
+#define  NMS_ENUM_NAMES(...)    NMSCPP_FOR(_NMS_ENUM_NAME, __VA_ARGS__)
+#endif
+
+#define NMS_ENUM(type, ...)                                                         \
+enum class type { __VA_ARGS__ };                                                    \
+inline auto&  _make_enum_names(type) {                                              \
+    static const ::nms::str names[] ={ NMS_ENUM_NAMES((__VA_ARGS__)) };             \
+    return names;                                                                   \
 }
 
-#define NMS_ENUM_TYPE(type, alias,...)                                      \
-enum class type: alias { __VA_ARGS__ };                                     \
-inline nms::View<const ::nms::str> _make_enum_names(type) {                 \
-    static const auto names[] ={ NMSCPP_FOR(_NMS_ENUM_NAME, __VA_ARGS__) }; \
-    return {names};                                                         \
+#define NMS_ENUM_TYPE(type, alias,...)                                              \
+enum class type: alias { __VA_ARGS__ };                                             \
+inline auto& _make_enum_names(type) {                                               \
+    static const auto names[] ={ NMS_ENUM_NAMES((__VA_ARGS__)) };                   \
+    return names;                                                                   \
 }
 
 }

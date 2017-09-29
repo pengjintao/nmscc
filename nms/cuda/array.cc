@@ -29,7 +29,7 @@ nms_test(array) {
     // h = a  (copy from device to host)
     h <<= a;
 
-    io::log::debug("result = {:|}", h.slice({ 0u, 8u }, { 0u, 8u }));
+    io::log::debug("result = {-7.3}", h.slice({ 0u, 8u }, { 0u, 8u }));
 }
 
 nms_test(project) {
@@ -47,8 +47,8 @@ nms_test(project) {
     auto x_imag = host_imag.slice({ 0u }, { 0u, 8u }, { 0u, 8u });
     auto x_view = host_view.slice({ 0u, 8u }, { 0u, 8u });
 
-    io::log::debug("imag = {:|}", x_imag);
-    io::log::debug("view = {:|}", x_view);
+    io::log::debug("imag = {}", x_imag);
+    io::log::debug("view = {}", x_view);
 }
 #pragma endregion
 

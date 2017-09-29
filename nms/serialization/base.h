@@ -14,7 +14,14 @@ enum DOMType
 struct Node;
 struct DOM;
 
-NMS_ENUM(Type, $null, $bool, $i8, $u8, $i16, $u16, $i32, $u32, $i64, $u64, $f32, $f64, $num, $str, $key, $time, $array, $object);
+enum class NodeType: u16 {
+    $null, $bool, $i8, $u8, $i16, $u16, $i32, $u32, $i64, $u64, $f32, $f64, $num, $str, $key, $time, $array, $object
+};
+
+inline auto& _make_enum_names(NodeType) {
+    static const str names[] ={ "null", "bool", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "f32", "f64", "num", "str", "key", "time", "array", "object" };
+    return names;
+}
 
 struct ISerializable
 {

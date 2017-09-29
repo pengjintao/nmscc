@@ -15,107 +15,114 @@ struct Node
     using cstr  = const char*;
 
 public:
-    Type    type;           // 2 byte
+    NodeType    type;           // 2 byte
     Tsize   size;           // 2 byte
     Tnext   next;           // 4 byte
 
     union                   // 8byte
     {
-        void*   $val;
-        bool    $bool;
-        i8      $i8;
-        i16     $i16;
-        i32     $i32;
-        i64     $i64;
+        const void* $val;
+        bool        $bool;
+        i8          $i8;
+        i16         $i16;
+        i32         $i32;
+        i64         $i64;
 
-        u8      $u8;
-        u16     $u16;
-        u32     $u32;
-        u64     $u64;
+        u8          $u8;
+        u16         $u16;
+        u32         $u32;
+        u64         $u64;
 
-        f32     $f32;
-        f64     $f64;
-        i64     $time;
-        cstr    $num;
-        cstr    $str;
-        cstr    $key;
-        Node*   $arr;
-        Node*   $obj;
+        f32         $f32;
+        f64         $f64;
+        i64         $time;
+        cstr        $num;
+        cstr        $str;
+        cstr        $key;
+        Node*       $arr;
+        Node*       $obj;
     };
 
 public:
-    static Node from_bool(bool val) { Node ret = { Type::$bool, 0, 0, nullptr }; ret.$bool = val;       return ret; }
-    static Node from_num (u8   val) { Node ret = { Type::$u8,   0, 0, nullptr }; ret.$u8   = val;       return ret; }
-    static Node from_num (i8   val) { Node ret = { Type::$i8,   0, 0, nullptr }; ret.$i8   = val;       return ret; }
-    static Node from_num (u16  val) { Node ret = { Type::$u16,  0, 0, nullptr }; ret.$u16  = val;       return ret; }
-    static Node from_num (i16  val) { Node ret = { Type::$i16,  0, 0, nullptr }; ret.$i16  = val;       return ret; }
-    static Node from_num (u32  val) { Node ret = { Type::$u32,  0, 0, nullptr }; ret.$u32  = val;       return ret; }
-    static Node from_num (i32  val) { Node ret = { Type::$i32,  0, 0, nullptr }; ret.$i32  = val;       return ret; }
-    static Node from_num (u64  val) { Node ret = { Type::$u64,  0, 0, nullptr }; ret.$u64  = val;       return ret; }
-    static Node from_num (i64  val) { Node ret = { Type::$i64,  0, 0, nullptr }; ret.$i64  = val;       return ret; }
-    static Node from_num (f32  val) { Node ret = { Type::$f32,  0, 0, nullptr }; ret.$f32  = val;       return ret; }
-    static Node from_num (f64  val) { Node ret = { Type::$f64,  0, 0, nullptr }; ret.$f64  = val;       return ret; }
-    static Node from_time(time val) { Node ret = { Type::$time, 0, 0, nullptr }; ret.$i64  = val.stamp; return ret; }
+    static Node from_bool(bool val) { Node ret = { NodeType::$bool, 0, 0, nullptr }; ret.$bool = val;       return ret; }
+    static Node from_num (u8   val) { Node ret = { NodeType::$u8,   0, 0, nullptr }; ret.$u8   = val;       return ret; }
+    static Node from_num (i8   val) { Node ret = { NodeType::$i8,   0, 0, nullptr }; ret.$i8   = val;       return ret; }
+    static Node from_num (u16  val) { Node ret = { NodeType::$u16,  0, 0, nullptr }; ret.$u16  = val;       return ret; }
+    static Node from_num (i16  val) { Node ret = { NodeType::$i16,  0, 0, nullptr }; ret.$i16  = val;       return ret; }
+    static Node from_num (u32  val) { Node ret = { NodeType::$u32,  0, 0, nullptr }; ret.$u32  = val;       return ret; }
+    static Node from_num (i32  val) { Node ret = { NodeType::$i32,  0, 0, nullptr }; ret.$i32  = val;       return ret; }
+    static Node from_num (u64  val) { Node ret = { NodeType::$u64,  0, 0, nullptr }; ret.$u64  = val;       return ret; }
+    static Node from_num (i64  val) { Node ret = { NodeType::$i64,  0, 0, nullptr }; ret.$i64  = val;       return ret; }
+    static Node from_num (f32  val) { Node ret = { NodeType::$f32,  0, 0, nullptr }; ret.$f32  = val;       return ret; }
+    static Node from_num (f64  val) { Node ret = { NodeType::$f64,  0, 0, nullptr }; ret.$f64  = val;       return ret; }
+    static Node from_time(time val) { Node ret = { NodeType::$time, 0, 0, nullptr }; ret.$i64  = val.stamp; return ret; }
 
-    static Node from_num (str  val) { Node ret = { Type::$num, Tsize(val.count), 0, nullptr }; ret.$num = val.data; return ret; }
-    static Node from_str (str  val) { Node ret = { Type::$str, Tsize(val.count), 0, nullptr }; ret.$str = val.data; return ret; }
-    static Node from_key (str  val) { Node ret = { Type::$str, Tsize(val.count), 0, nullptr }; ret.$key = val.data; return ret; }
+    static Node from_num (str  val) { Node ret = { NodeType::$num, Tsize(val.count), 0, val.data }; return ret; }
+    static Node from_str (str  val) { Node ret = { NodeType::$str, Tsize(val.count), 0, val.data }; return ret; }
+    static Node from_key (str  val) { Node ret = { NodeType::$key, Tsize(val.count), 0, val.data }; return ret; }
 
-    static Node make_null()   { Node ret = { Type::$null,   0, 0, nullptr }; return ret; }
-    static Node make_array()  { Node ret = { Type::$array,  0, 0, nullptr }; return ret; }
-    static Node make_object() { Node ret = { Type::$object, 0, 0, nullptr }; return ret; }
+    static Node make_null()   { Node ret = { NodeType::$null,   0, 0, nullptr }; return ret; }
+    static Node make_array()  { Node ret = { NodeType::$array,  0, 0, nullptr }; return ret; }
+    static Node make_object() { Node ret = { NodeType::$object, 0, 0, nullptr }; return ret; }
 
     __declspec(property(get=get_text)) str text;
     str get_text() const {
-        if (type == Type::$null) {
+        if (type == NodeType::$null) {
             return {};
         }
 
-        if ((type != Type::$str) && (type != Type::$key) && (type != Type::$num) ) {
-            NMS_THROW(Eunexpect<Type>{Type::$str, type});
+        if ((type != NodeType::$str) && (type != NodeType::$key) && (type != NodeType::$num) ) {
+            NMS_THROW(Eunexpect<NodeType>{NodeType::$str, type});
         }
         return { $str, size};
     }
 
     template<class T>
-    void get_num(T& val, Type expect) const {
+    void get_num(T& val, NodeType expect) const {
         if (type != expect) {
-            if (type == Type::$num) {
-
+            if (type == NodeType::$num) {
+                auto num_str = str{ $num, size };
+                if (str_cast(num_str, val)) {
+                    const_cast<NodeType&>(this->type) = expect;
+                    reinterpret_cast<T&>(const_cast<u64&>(this->$u64)) = val;
+                    return;
+                }
             }
-            else {
-                NMS_THROW(Eunexpect<Type>{Type::$num, type});
-            }
+            NMS_THROW(Eunexpect<NodeType>{NodeType::$num, type});
         }
         val = *reinterpret_cast<const T*>(&val);
     }
 
     void get_val(bool&  val) const {
-        if (type == Type::$bool) {
+        if (type == NodeType::$bool) {
             val = $bool;
+            return;
         }
-        NMS_THROW(Eunexpect<Type>{Type::$bool, type});
+        NMS_THROW(Eunexpect<NodeType>{NodeType::$bool, type});
     }
 
     void get_val(str&   val) const {
-        if (type == Type::$str) {
+        if (type == NodeType::$str) {
             val = str{ $str, size };
+            return;
         }
-        NMS_THROW(Eunexpect<Type>{Type::$str, type});
+        NMS_THROW(Eunexpect<NodeType>{NodeType::$str, type});
     }
 
     void get_val(time&  val) const {
-        if (type == Type::$time) {
+        if (type == NodeType::$time) {
             val = time::from_stamp($time);
+            return;
         }
-        else if (type == Type::$str) {
+        else if (type == NodeType::$str) {
             auto time_str = str{ $str, size };
             if (time::parse(time_str, {}, val)) {
-                const_cast<Type&>(this->type)  = Type::$time;
-                const_cast<i64&> (this->$time) = val.stamp;
+                const_cast<NodeType&>(this->type)   = NodeType::$time;
+                const_cast<i64&> (this->$time)      = val.stamp;
+                return;
             }
         }
-        NMS_THROW(Eunexpect<Type>{Type::$str, type});
+        NMS_THROW(Eunexpect<NodeType>{NodeType::$str, type});
     }
 };
 
@@ -157,17 +164,13 @@ struct DOM
 
         str key() const {
             auto& element = (*nodes)[index - 1];
-            if (element.type != Type::$key) {
-                NMS_THROW(Eunexpect<Type>{Type::$key, element.type });
+            if (element.type != NodeType::$key) {
+                NMS_THROW(Eunexpect<NodeType>{NodeType::$key, element.type });
             }
             return { element.$key, element.size };
         }
 
         DOM operator*() const {
-            return { nodes, index };
-        }
-
-        DOM operator->() const {
             return { nodes, index };
         }
 
@@ -187,13 +190,13 @@ struct DOM
     #pragma warning(disable: 4061)
     #endif
         switch (node.type) {
-        case Type::$null:
+        case NodeType::$null:
             return { nodes, 0 };
 
-        case Type::$array:
+        case NodeType::$array:
             return { nodes, index + 1 };
 
-        case Type::$object:
+        case NodeType::$object:
             return { nodes, index + 2 };
 
         default:
@@ -203,7 +206,7 @@ struct DOM
     #ifdef NMS_CC_MSVC
     #pragma warning(pop)
     #endif
-        NMS_THROW(Eunexpect<Type>{Type::$array, node.type});
+        NMS_THROW(Eunexpect<NodeType>{NodeType::$array, node.type});
     }
 
     /* iterator: end */
@@ -224,8 +227,8 @@ struct DOM
         (*nodes)[index] = val;
     }
 
-    __declspec(property(get=get_type)) Type type;
-    Type get_type() const {
+    __declspec(property(get=get_type)) NodeType type;
+    NodeType get_type() const {
         return node.type;
     }
 
@@ -238,8 +241,8 @@ struct DOM
     /* get key */
     str key() const {
         auto k = (*nodes)[index - 1];
-        if (k.type != Type::$key) {
-            NMS_THROW(Eunexpect<Type>{Type::$key, k.type });
+        if (k.type != NodeType::$key) {
+            NMS_THROW(Eunexpect<NodeType>{NodeType::$key, k.type });
         }
         str val = { k.$str, k.size };
         return val;
@@ -250,20 +253,80 @@ struct DOM
     void deserialize(bool&  val) const { node.get_val(val); }
     void deserialize(str&   val) const { node.get_val(val); }
     void deserialize(time&  val) const { node.get_val(val); }
-    void deserialize(i8&    val) const { node.get_num(val, Type::$i8);     }
-    void deserialize(u8&    val) const { node.get_num(val, Type::$u8);     }
-    void deserialize(i16&   val) const { node.get_num(val, Type::$i16);    }
-    void deserialize(u16&   val) const { node.get_num(val, Type::$u16);    }
-    void deserialize(i32&   val) const { node.get_num(val, Type::$i32);    }
-    void deserialize(u32&   val) const { node.get_num(val, Type::$u32);    }
-    void deserialize(i64&   val) const { node.get_num(val, Type::$i64);    }
-    void deserialize(u64&   val) const { node.get_num(val, Type::$u64);    }
-    void deserialize(f32&   val) const { node.get_num(val, Type::$f32);    }
-    void deserialize(f64&   val) const { node.get_num(val, Type::$f64);    }
+    void deserialize(i8&    val) const { node.get_num(val, NodeType::$i8);     }
+    void deserialize(u8&    val) const { node.get_num(val, NodeType::$u8);     }
+    void deserialize(i16&   val) const { node.get_num(val, NodeType::$i16);    }
+    void deserialize(u16&   val) const { node.get_num(val, NodeType::$u16);    }
+    void deserialize(i32&   val) const { node.get_num(val, NodeType::$i32);    }
+    void deserialize(u32&   val) const { node.get_num(val, NodeType::$u32);    }
+    void deserialize(i64&   val) const { node.get_num(val, NodeType::$i64);    }
+    void deserialize(u64&   val) const { node.get_num(val, NodeType::$u64);    }
+    void deserialize(f32&   val) const { node.get_num(val, NodeType::$f32);    }
+    void deserialize(f64&   val) const { node.get_num(val, NodeType::$f64);    }
 
+#pragma region deserialize: array
+    template<class T, u32 N>
+    void deserialize(Vec<char, N>& vec) const {
+        auto text = node.get_text();;
+        vec = text;
+    }
+
+    template<class T, u32 N>
+    void deserialize(Vec<T, N>& vec) const {
+        auto element_idx = 0u;
+        auto element_cnt = this->size;
+        for (auto itr = begin(); element_idx < element_cnt; ++element_idx, ++itr) {
+            const auto element = *itr;
+            element.deserialize(vec[element_idx]);
+        }
+    }
+
+    void deserialize(IList<char>& list) const {
+        str ret;
+        this->deserialize(ret);
+        list = ret;
+    }
+
+    template<class T>
+    void deserialize(IList<T>& list) const {
+        auto element_idx = 0u;
+        auto element_cnt = this->size;
+        for (auto itr = begin(); element_idx < element_cnt; ++element_idx, ++itr) {
+            list.resize(list.size + 1);
+            (*itr).deserialize(list[element_idx]);
+        }
+    }
+#pragma endregion
+
+#pragma region deserialize: object
     template<class T, class=decltype(T::_$member_cnt)>
-    void deserialize(T& val) const
-    { }
+    void deserialize(T& obj) const {
+        this->_deserialize_reflect_index(obj, Tu32<0>{}, Tu32<T::_$member_cnt>{});
+    }
+
+    template<class T, u32 Idx>
+    void _deserialize_reflect_index(T& obj, Tu32<Idx>, Tu32<1>) const {
+        this->_deserialize_reflect_member<Idx>(obj);
+    }
+
+    template<class T, u32 Idx, u32 Iver>
+    void _deserialize_reflect_index(T& obj, Tu32<Idx>, Tu32<Iver>) const {
+        this->_deserialize_reflect_member<Idx>(obj);
+        this->_deserialize_reflect_index(obj, Tu32<Idx + 1>{}, Tu32<Iver - 1>{});
+    }
+
+    template<u32 Idx, typename T>
+    void _deserialize_reflect_member(T& obj) const {
+        using Tmember = typename Tmembers<T>::type<Idx>;
+        const auto  member_name = Tmember::name();
+        auto& member_value      = Tmember::value(obj);
+
+        auto itr = this->find(member_name);
+        if (itr.index != 0) {
+            (*itr).deserialize(member_value);
+        }
+    }
+#pragma endregion
 
 #pragma endregion
 
@@ -282,9 +345,66 @@ struct DOM
     void serialize(str  val) { node = Node::from_str (val); }
     void serialize(time val) { node = Node::from_time(val); }
 
-    template<class T, class=decltype(T::_$member_cnt)>
-    void serialize(const T& val) {
+#pragma region serialize: array
+    void serialize_array(const char array[], u32 count) {
+        serialize(str{ array, count });
     }
+
+    template<class T>
+    void serialize_array(const T array[], u32 count) {
+        node = Node::make_array();
+
+        auto prev_idx = this->index;
+        for (auto i = 0u; i < count; ++i) {
+            auto element_idx = this->add(this->index, prev_idx, Node::make_null());
+            auto element_node= DOM{ nodes, element_idx };
+            element_node.serialize(array[i]);
+            prev_idx = element_idx;
+        }
+    }
+
+    template<class T, u32 N>
+    void serialize(const Vec<T,N>& vec) {
+        serialize_array(vec.data, vec.count);
+    }
+
+    template<class T>
+    void serialize(const View<T, 0>& view) {
+        serialize_array(view.data, view.count);
+    }
+#pragma endregion
+
+#pragma region serialize: object
+    template<class T, class=decltype(T::_$member_cnt)>
+    void serialize(const T& obj) {
+        node = Node::make_object();
+        this->_serialize_reflect_index(obj, 0, Tu32<0>{}, Tu32<T::_$member_cnt>{});
+    }
+
+    template<class T, u32 Idx>
+    void _serialize_reflect_index(const T& obj, i32 prev_id, Tu32<Idx>, Tu32<1>) {
+        this->_serialize_reflect_member<Idx>(obj, prev_id);
+    }
+
+    template<class T, u32 Idx, u32 Iver>
+    void _serialize_reflect_index(const T& obj, i32 prev_id, Tu32<Idx>, Tu32<Iver>) {
+        const auto this_id = this->_serialize_reflect_member<Idx>(obj, prev_id);
+        this->_serialize_reflect_index(obj, this_id, Tu32<Idx + 1>{}, Tu32<Iver - 1>{});
+    }
+
+    template<u32 Idx, typename T>
+    i32 _serialize_reflect_member(const T& obj, i32 prev_id) {
+        using Tmember = typename Tmembers<T>::type<Idx>;
+        const auto  member_name  = Tmember::name();
+        const auto& member_value = Tmember::value(obj);
+
+        auto member_id = this->add(index, prev_id, member_name, Node::make_null());
+        auto member_dom= DOM{ nodes, member_id };
+        member_dom.serialize(member_value);
+
+        return member_id;
+    }
+#pragma endregion
 
 #pragma endregion
 
@@ -328,48 +448,49 @@ struct DOM
         return (*nodes)[0].size;
     }
 
-    NMS_API i32 add(i32 root, i32 prev, const Node& val);
-
-    NMS_API i32 add(i32 root, i32 prev, const str& key, const Node& val);
+    NMS_API i32 add(i32 root_idx, i32 prev_idx, const Node& val);
+    NMS_API i32 add(i32 root_idx, i32 prev_idx, const str&  key, const Node& val);
 #pragma endregion
 
 #pragma region format
-    void sformat(IString& buf, const str& data_fmt) const {
-        if (data_fmt == "xml") {
-            sformat(buf, $xml);
+    void sformat(IString& outbuf, const FormatStyle& fmt_style) const {
+        const auto spec = fmt_style.spec;
+        if (spec == "xml") {
+            sformat(outbuf, $xml);
         }
         else {
-            sformat(buf, $json);
+            sformat(outbuf, $json);
         }
     }
 
-    void sformat(IString& buf, DOMType data_fmt) const {
-        switch (data_fmt) {
+    void sformat(IString& outbuf, DOMType fmt_type) const {
+        switch (fmt_type) {
         case $json:
-            _format_json(buf);
+            _format_json(outbuf);
             break;
         case $xml:
-            _format_xml_begin(buf);
-            _format_xml_body(buf);
-            _format_xml_end(buf);
+            _format_xml_begin(outbuf);
+            _format_xml_body(outbuf);
+            _format_xml_end(outbuf);
             break;
         }
     }
 
-    NMS_API void _format_json(IString& buf, u32 level = 0) const;
 private:
-    NMS_API void _format_xml_begin(IString& buf) const;
-    NMS_API void _format_xml_end  (IString& buf) const;
-    NMS_API void _format_xml_body (IString& buf, u32 level = 0) const;
+    NMS_API void _format_json(IString& outbuf, u32 indent_level = 0) const;
+
+    NMS_API void _format_xml_begin(IString& outbuf) const;
+    NMS_API void _format_xml_end  (IString& outbuf) const;
+    NMS_API void _format_xml_body (IString& outbuf, u32 indent_level = 0) const;
 
 #pragma endregion
 
 #pragma region parse
 public:
-    void _parse(const str& str, DOMType type) {
+    void parse(const str& str, DOMType type, i32 root_idx, i32 prev_idx) {
         switch (type) {
         case $json:
-            _parse_json(str);
+            _parse_json(str, root_idx, prev_idx);
             break;
         case $xml:
         default:
@@ -377,7 +498,8 @@ public:
         }
     }
 
-    NMS_API void _parse_json(const str& json);
+private:
+    NMS_API void _parse_json(const str& json, i32 root_idx, i32 prev_idx);
 
 #pragma endregion
 
@@ -392,14 +514,14 @@ public:
 
 #pragma region constructor
     Tree()
-        : nodes_{}, dom_{&nodes_, 0}
+        : nodes_{}
     {}
 
     ~Tree()
     {}
 
     Tree(Tree&& rhs) noexcept
-        : nodes_{ move(rhs.nodes_) }, dom_{ &nodes_, rhs.dom_.index }
+        : nodes_{ move(rhs.nodes_) }
     {}
 
     Tree(const Tree&)               = delete;
@@ -409,42 +531,51 @@ public:
     template<class T, class=decltype(T::_$member_cnt) >
     static Tree from_object(const T& obj) {
         Tree tree;
-        tree.dom_.serialize(obj);
+        tree.nodes_ += Node::make_null();
+        tree.nodes_ += Node::make_object();
+        tree.dom.serialize(obj);
         return tree;
     }
 
-    static Tree from_json(const str& json) {
+    static Tree from_json(const str& json_text) {
         Tree tree;
-        tree.dom_._parse_json(json);
+        tree.dom.parse(json_text, $json, -1, -1); 
         return tree;
+    }
+#pragma endregion
+
+#pragma region property
+    __declspec(property(get=get_dom)) DOM dom;
+
+    DOM get_dom() const {
+        return DOM{ const_cast<Tdata*>(&nodes_), 1 };
     }
 #pragma endregion
 
 #pragma region serialize/deserialize
     template<class T>
     void deserialize(T& val) const {
-        dom_.deserialize(val);
+        this->dom.deserialize(val);
     }
 
     template<class T>
     void serialize(const T& val) {
-        dom_.serialize(val);
+        this->dom.serialize(val);
     }
 #pragma endregion
 
 #pragma region format/parse
     void sformat(IString& buf, const FormatStyle& style) const {
-        dom_.sformat(buf, str{ style.spec, strlen(style.spec) });
+        this->dom.sformat(buf,  style);
     }
 
     void format(IString& buf, DOMType type) const {
-        dom_.sformat(buf, type);
+        this->dom.sformat(buf, type);
     }
 #pragma endregion
 
 protected:
     Tdata nodes_;
-    DOM   dom_;
 };
 
 }

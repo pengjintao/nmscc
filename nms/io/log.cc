@@ -15,13 +15,18 @@ NMS_API void set_level(Level level) {
     gLevel = level;
 }
 
-NMS_API TxtFile& g_file() {
+NMS_API TxtFile& _get_log_file() {
     static TxtFile file;
     return file;
 }
 
 NMS_API void set_file_path(const Path& path) {
-    g_file().reopen(path, FileMode::Read);
+    _get_log_file().reopen(path, FileMode::Read);
+}
+
+static str _get_level_name(Level level) {
+    static const str names[] ={ "  ", "--", "**", "??", "!!", "XX", "XX" };
+    return names[u32(level)];
 }
 
 static str get_console_color_of_level(Level type) {
@@ -61,7 +66,7 @@ NMS_API void logging_message(Level level, IString& msg) {
 
     // current process time
     const auto time = clock();
-    const auto name = Enum<Level>{ level }.name;
+    const auto name = _get_level_name(level);
 
     // 1. terminal
     {
@@ -85,7 +90,7 @@ NMS_API void logging_message(Level level, IString& msg) {
     }
 
     // 2. file
-    static auto& log_file = g_file();
+    static auto& log_file = _get_log_file();
 
     if (log_file) {
         static thread_local U8String<4 * 1024 * 1024> file_buff;

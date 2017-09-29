@@ -9,7 +9,7 @@ namespace nms
 struct FormatStyle;
 
 template<class Tview>
-inline void _sformat_view(IString& buf, const FormatStyle& style, const Tview& view);
+inline void sformat_view(IString& buf, const FormatStyle& style, const Tview& view);
 #pragma endregion
 
 template<typename T, u32 ...Ns>
@@ -18,39 +18,49 @@ struct Vec;
 template<class T>
 struct Vec<T, 0>
 {
+    static constexpr auto $rank  = 0;
     static constexpr auto $size  = 0;
     static constexpr auto $count = 0;
-    T data;
+    using Tdata = T;
 
-    template<typename I> __forceinline T&       operator[] (I)       noexcept { return data; }
-    template<typename I> __forceinline const T& operator[] (I) const noexcept { return data; }
+    Tdata data;
+
+    template<typename I> __forceinline Tdata&       operator[] (I)       noexcept { return data; }
+    template<typename I> __forceinline const Tdata& operator[] (I) const noexcept { return data; }
 
 };
 
 template<typename T, u32 N>
 struct Vec<T, N>
 {
+    static constexpr auto $rank  = 0;
     static constexpr auto $size  = N;
     static constexpr auto $count = N;
+    using Tdata = T;
 
-    T data[$size];
+    Tdata data[$size];
 
-    template<typename I> __forceinline T&       operator[] (I idx)       noexcept { return data[idx]; }
-    template<typename I> __forceinline const T& operator[] (I idx) const noexcept { return data[idx]; }
-
-    static Vec from_array(const T(&array)[N]) {
+    static Vec from_array(const Tdata(&array)[N]) {
         return from_seq(Tindex_seq<N>{}, array);
     }
 
     template<u32 ...I, typename Tarray>
     static Vec from_seq(Tu32<I...>, const Tarray& array) {
-        return Vec{ { array[I]... }  };
+        return Vec{ { array[I]... } };
     }
 
+    __declspec(property(get=get_count)) u32 count;
+    constexpr u32 get_count() const {
+        return $count;
+    }
+
+    template<typename I> __forceinline Tdata&       operator[] (I idx)       noexcept { return data[idx]; }
+    template<typename I> __forceinline const Tdata& operator[] (I idx) const noexcept { return data[idx]; }
+
 #pragma region format
-    template<typename Tbuff, typename Tstyle>
-    void sformat(Tbuff& outbuf, const Tstyle& style) const {
-        _sformat_view(outbuf, style, *this);
+    template<typename Tstring>
+    void sformat(Tstring& outbuf, const FormatStyle& style) const {
+        sformat_view(outbuf, style, *this);
     }
 #pragma endregion
 };

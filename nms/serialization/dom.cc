@@ -5,8 +5,8 @@ namespace nms::serialization
 {
 
 NMS_API DOM DOM::operator[](u32 k) const {
-    if (this->type != Type::$array) {
-        NMS_THROW(Eunexpect<Type>{ Type::$array, this->type });
+    if (this->type != NodeType::$array) {
+        NMS_THROW(Eunexpect<NodeType>{ NodeType::$array, this->type });
     }
 
     const auto n = this->count;
@@ -30,8 +30,8 @@ NMS_API DOM DOM::operator[](u32 k) {
         node_list.append(Node::make_array());
         this->index = 1;
     }
-    else if (this->type != Type::$array) {
-        NMS_THROW(Eunexpect<Type>{ Type::$array, this->type });
+    else if (this->type != NodeType::$array) {
+        NMS_THROW(Eunexpect<NodeType>{ NodeType::$array, this->type });
     }
 
     // find index
@@ -48,8 +48,8 @@ NMS_API DOM DOM::operator[](u32 k) {
 }
 
 NMS_API DOM::Iterator DOM::find(str expect) const {
-    if (this->type != Type::$object) {
-        NMS_THROW(Eunexpect<Type>{ Type::$object, this->type });
+    if (this->type != NodeType::$object) {
+        NMS_THROW(Eunexpect<NodeType>{ NodeType::$object, this->type });
     }
 
     auto n      = this->count;
@@ -85,11 +85,11 @@ NMS_API DOM DOM::operator[](str key) {
     }
 
     auto& v = this->node;
-    if (this->type == Type::$null) {
-        const_cast<Type&>(v.type) = Type::$object;
+    if (this->type == NodeType::$null) {
+        const_cast<NodeType&>(v.type) = NodeType::$object;
     }
-    else if (this->type != Type::$object) {
-        NMS_THROW(Eunexpect<Type>{ Type::$object, this->type });
+    else if (this->type != NodeType::$object) {
+        NMS_THROW(Eunexpect<NodeType>{ NodeType::$object, this->type });
     }
 
     auto n      = v.size;
@@ -109,7 +109,7 @@ NMS_API DOM DOM::operator[](str key) {
     return DOM{ nodes, pval };
 }
 
-NMS_API i32 DOM::add(i32 root, i32 prev, const Node& val) {
+NMS_API i32 DOM::add(i32 root_idx, i32 prev_idx, const Node& node) {
     auto& node_list = *nodes;
 
     auto xpos = i32(node_list.count);
@@ -119,21 +119,21 @@ NMS_API i32 DOM::add(i32 root, i32 prev, const Node& val) {
         this->index = 1;
         ++xpos;
     }
-    node_list.append(val);
+    node_list.append(node);
 
-    if (root > 0) {
-        node_list[root].size += 1;
+    if (root_idx > 0) {
+        node_list[root_idx].size += 1;
     }
-    if (prev > 0) {
-        node_list[prev].next = xpos - prev;
+    if (prev_idx > 0) {
+        node_list[prev_idx].next = xpos - prev_idx;
     }
-    if (val.type == Type::$str) {
-        node_list[0].size += val.size;
+    if (node.type == NodeType::$str) {
+        node_list[0].size += node.size;
     }
     return i32(xpos);
 }
 
-NMS_API i32 DOM::add(i32 root, i32 prev, const str& key, const Node& val) {
+NMS_API i32 DOM::add(i32 root_idx, i32 prev_idx, const str& key, const Node& node) {
     auto& node_list = *nodes;
 
     auto xpos = i32(node_list.count + 1);
@@ -143,17 +143,17 @@ NMS_API i32 DOM::add(i32 root, i32 prev, const str& key, const Node& val) {
     }
 
     node_list.append(Node::from_key(key));
-    node_list.append(val);
+    node_list.append(node);
 
-    if (root > 0) {
-        node_list[root].size++;
+    if (root_idx > 0) {
+        node_list[root_idx].size++;
     }
-    if (prev > 0) {
-        const auto offset = xpos - prev;
-        node_list[prev - 0].next = offset;
-        node_list[prev - 1].next = offset;
+    if (prev_idx > 0) {
+        const auto offset = xpos - prev_idx;
+        node_list[prev_idx - 0].next = offset;
+        node_list[prev_idx - 1].next = offset;
     }
-    node_list[0].size += Node::Tsize(key.count + val.size);
+    node_list[0].size += Node::Tsize(key.count + node.size);
     return xpos;
 }
 

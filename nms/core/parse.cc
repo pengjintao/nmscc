@@ -111,6 +111,7 @@ static bool _parse_int(str& text, const str& fmt, T& val) {
             if (c >= '0' && c <= '9') {
                 abs_val *= 10;
                 abs_val += T(c - '0');
+                ++pos_end;
             }
             else {
                 break;

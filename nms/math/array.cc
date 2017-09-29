@@ -76,7 +76,7 @@ nms_test(array_math) {
     // h = a  (copy from device to host)
     h <<= a;
 
-    io::console::writeln("result = {:-8.3}", h.slice({ 0u, 8u }, { 0u, 8u }));
+    io::console::writeln("result = {-8.3}", h.slice({ 0u, 8u }, { 0u, 8u }));
 }
 
 nms_test(array_project3d) {
@@ -89,8 +89,8 @@ nms_test(array_project3d) {
     auto x_imag = imag.slice({ 0u }, { 0u, 8u }, { 0u, 8u });
     auto x_view = view.slice({ 0u, 8u }, { 0u, 8u });
 
-    io::console::writeln("imag = {:-7.3}", x_imag);
-    io::console::writeln("view = {:-7.3}", x_view);
+    io::console::writeln("imag = {-7.3}", x_imag);
+    io::console::writeln("view = {-7.3}", x_view);
 }
 
 nms_test(array_save_load) {

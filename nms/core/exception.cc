@@ -11,7 +11,13 @@ NMS_API StackInfo& get_exception_stackinfo() noexcept {
 
 NMS_API void set_exception_stackinfo() noexcept {
     auto& global_info   = get_exception_stackinfo();
-    auto  current_info  = StackInfo::backtrace(1);
+    auto  current_info  = StackInfo::backtrace(3);
+    
+#ifdef NMS_OS_WINDOWS
+    if (current_info._count > 6) {
+        current_info._count -= 6;
+    }
+#endif
     global_info = current_info;
 }
 

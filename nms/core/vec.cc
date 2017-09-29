@@ -5,7 +5,7 @@ namespace nms
 
 nms_test(vec) {
 
-    i32x4 v4 ={ 1 };
+    i32x4 v4 ={ 1, 1, 1, 1 };
     test::assert_eq(v4[0], 1);
     test::assert_eq(v4[1], 1);
     test::assert_eq(v4[2], 1);

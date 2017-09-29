@@ -17,11 +17,6 @@ enum class Level
     Fatal,
 };
 
-inline auto _make_enum_names(Level) {
-    static str names[] = { "  ", "--", "**", "??", "!!", "XX", "XX" };
-    return View<const str>{ names};
-}
-
 extern Level gLevel;
 
 /* set log level*/

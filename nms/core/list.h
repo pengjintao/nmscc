@@ -97,22 +97,22 @@ public:
 #pragma region operator=
     template<class U, class = $when_is<Tdata, U> >
     IList& operator=(const View<const U>& rhs) {
-        clear();
-        appends(rhs.data(), rhs.count());
+        this->clear();
+        this->appends(rhs.data, rhs.count);
         return *this;
     }
 
     template<class U, class = $when_is<Tdata, U> >
     IList& operator=(const View<U>& rhs) {
-        clear();
-        appends(rhs.data(), rhs.count());
+        this->clear();
+        this->appends(rhs.data, rhs.count);
         return *this;
     }
 
     template<u32 SN>
     IList& operator=(const Tdata(&rhs)[SN]) {
-        clear();
-        appends(View<const Tdata>{rhs});
+        this->clear();
+        this->appends(View<const Tdata>{rhs});
         return *this;
     }
 #pragma endregion
@@ -120,25 +120,25 @@ public:
 #pragma region operator+=
     template<class U, class = $when_is<Tdata, U> >
     IList& operator+=(const View<const U>& rhs) {
-        appends(rhs.data, rhs.count);
+        this->appends(rhs.data, rhs.count);
         return *this;
     }
 
     template<class U, class = $when_is<Tdata, U> >
     IList& operator+=(const View<U>& rhs) {
-        appends(rhs.data, rhs.count);
+        this->appends(rhs.data, rhs.count);
         return *this;
     }
 
     template<u32 SN>
     IList& operator+=(const Tdata(&rhs)[SN]) {
-        appends(View<const Tdata>{rhs});
+        this->appends(rhs, $is<char, Tdata>? SN-1 : SN); 
         return *this;
     }
 
     template<class U, class=$when_as<Tdata, U> >
     IList& operator+= (U&& u) {
-        append(fwd<U>(u));
+        this->append(fwd<U>(u));
         return *this;
     }
 #pragma endregion
@@ -175,14 +175,14 @@ public:
     /*! append elements to the end */
     template<class U>
     IList& appends(const View<U>& view) {
-        appends(view.data, view.count);
+        this->appends(view.data, view.count);
         return *this;
     }
 
     /*! append elements to the end */
     template<class ...U>
     IList& append(U&& ...u) {
-        appends(1, fwd<U>(u)...);
+        this->appends(1, fwd<U>(u)...);
         return *this;
     }
 
@@ -190,11 +190,11 @@ public:
 
 #pragma region save/load
     void save(io::File& file) const {
-        saveFile(*this, file);
+        this->saveFile(*this, file);
     }
 
     static void load(IList& list, const io::File& file) {
-        loadFile(list, file);
+        this->loadFile(list, file);
     }
 #pragma endregion
 

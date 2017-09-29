@@ -50,7 +50,7 @@ static void _sformat_int(IString& str_out, const FormatStyle& style, const T& va
     // repeat ?
     if (style.type == '*') {
         if (val > 0 && val < 256) {
-            str_out.appends(u32(val), style.spec[1] == '\0' ? ' ' : style.spec[1]);
+            str_out.appends(u32(val), style._spec[1] == '\0' ? ' ' : style._spec[1]);
         }
         return;
     }
@@ -243,7 +243,6 @@ NMS_API void _sformat_val(IString& buf, const FormatStyle& style, const std::typ
 }
 #pragma endregion
 
-
 NMS_API FormatStyle FormatStyle::from_fmt_str(const str& fmt) {
     FormatStyle ret;
 
@@ -284,7 +283,7 @@ NMS_API FormatStyle FormatStyle::from_fmt_str(const str& fmt) {
     }
 
     // parse: type
-    if (i < n) {
+    if (i < n && fmt[i] != ':') {
         ret.type = fmt[i];
         ++i;
     }
@@ -293,15 +292,15 @@ NMS_API FormatStyle FormatStyle::from_fmt_str(const str& fmt) {
     if (i < n && fmt[i] == ':') {
         i++;
 
-        auto capicity = u32(sizeof(ret.spec));
+        const auto capicity = u32(sizeof(ret._spec));
         for (auto k = 0u; k < capicity && i < n; ++k, ++i) {
-            ret.spec[k] = fmt[i];
+            ret._spec[k] = fmt[i];
         }
     }
     return ret;
 }
 
-namespace ns_format
+namespace _ns_format
 {
 NMS_API bool next_value(IString& outbuf, str& strfmt, str& valfmt) {
     //! ----------------------

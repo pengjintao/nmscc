@@ -73,7 +73,7 @@ NMS_API DateTime DateTime::from_stamp(i64 stamp) {
 
 // UTC
 NMS_API DateTime::Tstamp DateTime::get_stamp() const {
-    tm tm = {};
+    struct tm tm = {};
     tm.tm_year  = year;
     tm.tm_mon   = month- 1;
     tm.tm_mday  = day;
@@ -83,7 +83,7 @@ NMS_API DateTime::Tstamp DateTime::get_stamp() const {
 
     tm.tm_year -= 1900;
 #ifdef NMS_OS_WINDOWS
-    const auto result = ::_mkgmtime(&tm);
+    const auto result = ::_mkgmtime64(&tm);
 #else
     const auto result = ::timegm(&tm);
 #endif

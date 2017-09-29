@@ -17,12 +17,8 @@
 #define NMSCPP_STR1(...)            NMSCPP_STR2 __VA_ARGS__
 #define NMSCPP_STR2(...)            #__VA_ARGS__
 
-#ifdef NMS_CC_INTELLISENSE
 /*! get element at index `id` */
-#define NMSCPP_AT(id, val, ...)     val
-#else
 #define NMSCPP_AT(id, ...)          NMSCPP_DO(NMSCPP_AT_##id, __VA_ARGS__)
-#endif
 
 #define NMSCPP_AT_0(_,...)          _
 #define NMSCPP_AT_1(_,...)          NMSCPP_AT_0(__VA_ARGS__,_)
@@ -76,20 +72,9 @@
 #define NMSCPP_AT_49(_,...)         NMSCPP_DO(NMSCPP_AT_48, __VA_ARGS__)
 #define NMSCPP_AT_50(_,...)         NMSCPP_DO(NMSCPP_AT_49, __VA_ARGS__)
 
-
-#ifdef NMS_CC_INTELLISENSE
-/* return arguments count */
-#define NMSCPP_COUNT(...)           0
-#else
 #define NMSCPP_COUNT(...)           NMSCPP_DO(NMSCPP_AT_50, ~, ##__VA_ARGS__, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40,39,38,37,36,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0)
-#endif
 
-#ifdef NMS_CC_INTELLISENSE
-/* foreach(t: args) => f(t) */
-#define NMSCPP_FOR(f, args, ...)    NMSCPP_DO(f, args)
-#else
 #define NMSCPP_FOR(f,...)           NMSCPP_FOR_X((f, __VA_ARGS__), (__VA_ARGS__, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40,39,38,37,36,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0))
-#endif
 
 #define NMSCPP_FOR_X(farg, fidx)    NMSCPP_FOR_Y fidx farg
 #define NMSCPP_FOR_Y($50,$49,$48,$47,$46,$45,$44,$43,$42,$41,$40,$39,$38,$37,$36,$35,$34,$33,$32,$31,$30,$29,$28,$27,$26,$25,$24,$23,$22,$21,$20,$19,$18,$17,$16,$15,$14,$13,$12,$11,$10,$9,$8,$7,$6,$5,$4,$3,$2,$1,$0, ...)  NMSCPP_FOR_##$0
@@ -195,12 +180,8 @@
 #define NMSCPP_FOR_98(f, t, ...)    NMSCPP_DO(f, t) NMSCPP_EX(NMSCPP_FOR_97(f, __VA_ARGS__))
 #define NMSCPP_FOR_99(f, t, ...)    NMSCPP_DO(f, t) NMSCPP_EX(NMSCPP_FOR_98(f, __VA_ARGS__))
 
-#ifdef NMS_CC_INTELLISENSE
 /*! loop(n, f, args...) => f(0, args...) ... f(n-1, args...) */
-#define NMSCPP_LOOP(n, f,...)       NMSCPP_DO(f, 0, __VA_ARGS__)
-#else
 #define NMSCPP_LOOP(n, f,...)       NMSCPP_LOOP_##n(f, __VA_ARGS__)
-#endif
 
 #define NMSCPP_LOOP_1(f, ...)       NMSCPP_DO(f,  0, __VA_ARGS__)
 #define NMSCPP_LOOP_2(f, ...)       NMSCPP_LOOP_1(f,  __VA_ARGS__) NMSCPP_DO(f,  1, __VA_ARGS__)

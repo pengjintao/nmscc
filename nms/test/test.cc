@@ -1,4 +1,5 @@
 #include <nms/test.h>
+#include <nms/util/system.h>
 #include <nms/util/stackinfo.h>
 
 namespace nms::test
@@ -133,6 +134,7 @@ NMS_API u32 invoke(const View<str>& masks) {
     }
 
     for (auto& test: tests) {
+        nms::system::sleep(0.05);
         auto stat = test.match(masks);
         auto ret  = test.invoke(stat);
 
@@ -159,13 +161,7 @@ NMS_API u32 invoke(const View<str>& masks) {
 
     for (auto i = 0u; i < failes.count; ++i) {
         auto& test = failes[i];
-
-        if (i + 1 < failes.count) {
-            console::writeln("  \033(0tq\033(B{}", test->name);
-        }
-        else {
-            console::writeln("  \033(0mq\033(B{}", test->name);
-        }
+        console::writeln("  [-] {}", test->name);
     }
 
     console::writeln("[===== nms.test ======]");

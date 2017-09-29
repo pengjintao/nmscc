@@ -59,6 +59,7 @@ private:
         static const char*  type_head   = full_name + funcsig_head_size_;
         static const u32    type_size   = u32(sizeof(__PRETTY_FUNCTION__)) - 1 - funcsig_head_size_ - funcsig_tail_size_;
         static const str    type_name   = {type_head, type_size};
+        return type_name;
     }
 };
 
@@ -89,7 +90,12 @@ struct Tmember
 
     template<typename U>
     static const T& value(const U& object) {
-        return *reinterpret_cast<const T*>(reinterpret_cast<const char*>(&object) + offset);
+        return *reinterpret_cast<const T*>(reinterpret_cast<const byte*>(&object) + offset);
+    }
+
+    template<typename U>
+    static T& value(U& object) {
+        return *reinterpret_cast<T*>(reinterpret_cast<byte*>(&object) + offset);
     }
 };
 
