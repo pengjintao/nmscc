@@ -184,7 +184,7 @@ NMS_API Path cwd() {
 #ifdef NMS_OS_WINDOWS
     const auto ret = ::getcwd(buff.data, i32(buff.capacity));
 #else
-    const auto ret = ::getcwd(buff.data(), size_t(buff.capacity()));
+    const auto ret = ::getcwd(buff.data, size_t(buff.capacity));
 #endif
     if (ret == nullptr) {
         return {};
@@ -235,7 +235,7 @@ NMS_API void mkdir(const Path& path) {
 #ifdef NMS_CC_MSVC
     const auto ret = ::mkdir(full_path.data);
 #else
-    const auto ret = ::mkdir(full_path.data(), 0755);
+    const auto ret = ::mkdir(full_path.data, 0755);
 #endif
 
     if (ret != 0) {

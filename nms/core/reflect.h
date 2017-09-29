@@ -1,9 +1,73 @@
 #pragma once
 
 #include <nms/core/base.h>
+#include <nms/core/view.h>
 
 namespace nms
 {
+
+/*! compile time typeid */
+struct TypeId
+{
+    using Tname = const str&;
+    using Tfunc = Tname(*)();
+
+    Tfunc _func_get_name;
+
+#pragma region constructors
+    template<typename T>
+    constexpr static TypeId make() {
+        return { &TypeId::func_get_name<T> };
+    }
+#pragma endregion
+
+#pragma region property
+    Tname get_name() const {
+        return _func_get_name();
+    }
+    __declspec(property(get=get_name)) Tname name;
+#pragma endregion
+
+#pragma region operator
+    constexpr friend bool operator==(TypeId x, TypeId y) {
+        return x._func_get_name == y._func_get_name;
+    }
+
+    constexpr friend bool operator!=(TypeId x, TypeId y) {
+        return x._func_get_name != y._func_get_name;
+    }
+#pragma endregion
+
+private:
+    constexpr TypeId(Tfunc func)
+        : _func_get_name(func)
+    { }
+
+    template<typename T>
+    static Tname func_get_name() {
+    #if defined(NMS_CC_MSVC)
+        static constexpr u32 funcsig_head_size_ = u32(sizeof("const struct nms::View<char const, 0> &__cdecl nms::TypeId::func_get_name<")) - 1;
+        static constexpr u32 funcsig_tail_size_ = u32(sizeof(">(void)")) - 1;
+    #elif defined(NMS_CC_CLANG)
+        static constexpr u32 funcsig_head_size_ = u32(sizeof("static const nms::View<const char>& nms::Type::_func_get_name() [T = ")) - 1;
+        static constexpr u32 funcsig_tail_size_ = u32(sizeof("]")) - 1;
+    #else
+    #   error("unknow c++ compiler")
+    #endif
+
+        static const char*  full_name   = __PRETTY_FUNCTION__;
+        static const char*  type_head   = full_name + funcsig_head_size_;
+        static const u32    type_size   = u32(sizeof(__PRETTY_FUNCTION__)) - 1 - funcsig_head_size_ - funcsig_tail_size_;
+        static const str    type_name   = {type_head, type_size};
+    }
+};
+
+/*! get compile-time typeid of type `T` */
+template<typename T>
+constexpr TypeId $typeid = TypeId::make<T>();
+
+#pragma endregion
+
 
 template<typename T, u64 offset, typename Tname>
 struct Tmember

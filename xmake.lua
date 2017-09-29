@@ -25,7 +25,7 @@ end
 set_languages("cxx1z")
 
 -- c++: warnings
-add_cxxflags("-Wall", "-Wextra", "-Wconversion", "-Wno-unknown-pragmas")
+add_cxxflags("-fms-extensions", "-Wall", "-Wextra", "-Wconversion", "-Wno-unknown-pragmas")
 
 -- app: dir
 add_includedirs(".")

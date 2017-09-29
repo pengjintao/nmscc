@@ -96,7 +96,7 @@ NMS_API DateTime DateTime::now() {
 #ifdef NMS_OS_WINDOWS
     ::localtime_s(&time_struct, &time_stamp);
 #else
-    ::localtime_r(&stamp, &tm);
+    ::localtime_r(&time_stamp, &time_struct);
 #endif
     return {
         u32(time_struct.tm_year) + 1900,

@@ -5,14 +5,11 @@
 
 namespace nms
 {
-
 #pragma region format: pre-define
 struct FormatStyle;
 
-NMS_API void _sformat_val(IString& buf, const FormatStyle& style, str  val);
-
-template<typename T>
-void sformat(IString& outbuf, const FormatStyle& style, const T& value);
+template<typename Tview>
+void _sformat_view(IString& outbuf, const FormatStyle& style, const Tview& view);
 #pragma endregion
 
 #pragma region scalar
@@ -29,8 +26,8 @@ struct Scalar
 
     T val;
 
+ 
     __declspec(property(get=get_dims)) Tdims dims;
-
     Tdims get_dims() const noexcept {
         return {0};
     }
@@ -214,7 +211,7 @@ struct View
     template<typename ...Tidx, u32 ...Icnt, u32 Idim=Tcnt<(Icnt!=1)...>::$value>
     View<const Tdata, Idim> slice(const Tidx(&...ids)[Icnt]) const noexcept {
 #ifndef NMS_CC_INTELLISENSE
-        auto tmp = _slice(Tseq<$rank>{}, ids...);
+        auto tmp = _slice(Tindex_seq<$rank>{}, ids...);
         auto ret = tmp._select_dims(Tindex_if<(Icnt!=1)...>{});
         return ret;
 #else
@@ -283,7 +280,7 @@ struct View
 
 #pragma region format
     void sformat(IString& buf, const FormatStyle& style) const {
-        _sformat(buf, style, *this);
+        _sformat_view(buf, style, *this);
     }
 #pragma endregion
 
@@ -357,46 +354,13 @@ private:
     static constexpr Tidxs _make_step_from_dims_seq(Tu32<Idim...>, const Tsize(&dims)[$rank]) noexcept {
         return { Tstep(idx_prod(Tindex_seq<Idim>{}, dims))... };
     }
-
-    template<typename Tbuff, typename Tstyle>
-    static void _sformat(Tbuff& outbuf, const Tstyle& style, const View<Tdata, 1>& view) {
-        const auto view_dims = view.dims;
-
-        outbuf += "\n";
-        for (Tsize nx = 0; nx < view_dims[0]; nx++) {
-            nms::sformat(outbuf, FormatStyle{ '>', 0, 3, 0 }, nx);
-            outbuf += "| ";
-            const auto& val = view(nx);
-            nms::sformat(outbuf, style, val);
-            outbuf += "\n";
-        }
-    }
-
-    template<typename Tbuff, typename Tstyle>
-    static void _sformat(Tbuff& outbuf, const Tstyle& style, const View<Tdata, 2>& view) {
-        const auto view_dims = view.dims;
-
-        outbuf += "\n";
-        for (Tsize nx = 0; nx < view_dims[0]; nx++) {
-            // format line-number
-            nms::sformat(outbuf, FormatStyle::fmt_uint_with_width('>', 3), nx);
-
-            outbuf += "| ";
-            for (Tsize ny = 0; ny < view_dims[1]; ny++) {
-                const auto& val = view(nx, ny);
-                nms::sformat(outbuf, style, val);
-                if (ny + 1 != view_dims[1]) outbuf += ", ";
-            }
-            outbuf += "\n";
-        }
-    }
 };
 
 template<typename T>
 struct View<T, 0>
 {
 #pragma region defines
-    constexpr static auto $rank = 1u;
+    constexpr static auto $rank = 0u;
 
     using Tdata = T;
     using Trank = u32;
@@ -623,7 +587,7 @@ struct View<T, 0>
 
 #pragma region format
     void sformat(IString& buf, const FormatStyle& style) const {
-        this->_sformat(buf, style, data_, size_);
+        _sformat_view(buf, style, *this);
     }
 #pragma endregion
 
@@ -642,24 +606,6 @@ protected:
         const auto s0 = index_of(i0);
         const auto s1 = index_of(i1);
         return s1 - s0 + 1;
-    }
-
-    static void _sformat(IString& outbuf, const FormatStyle& style, const char dat[], Tsize cnt) {
-        nms::_sformat_val(outbuf, style, str{ dat, cnt });
-    }
-
-    template<typename U>
-    static void _sformat(IString& outbuf, const FormatStyle& style, const U dat[], Tsize cnt) {
-        outbuf += '[';
-
-        for (Tsize i = 0u; i < cnt; ++i) {
-            nms::sformat(outbuf, style, dat[i]);
-            if (i + 1 != cnt) {
-                outbuf += ", ";
-            }
-        }
-
-        outbuf += ']';
     }
 };
 

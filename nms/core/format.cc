@@ -11,13 +11,13 @@ static uint _uint_to_str(char buff[], const FormatStyle& style, const T& val) {
 
     if (E == 10) {
         if (sizeof(T) <= sizeof(short)) {
-            return uint(::snprintf(buff, 256, "%hu", unsigned short(val)));
+            return uint(::snprintf(buff, 256, "%hu", ushort(val)));
         }
         if (sizeof(T) == sizeof(unsigned)) {
-            return uint(::snprintf(buff, 256, "%u", unsigned(val)));
+            return uint(::snprintf(buff, 256, "%u", uint(val)));
         }
         if (sizeof(T) == sizeof(long long)) {
-            return uint(::snprintf(buff, 256, "%llu", unsigned long long(val)));
+            return uint(::snprintf(buff, 256, "%llu", ullong(val)));
         }
     }
     else {
@@ -234,10 +234,10 @@ NMS_API void _sformat_val(IString& buf, const FormatStyle& style, const std::typ
 
     auto cxx_name = abi::__cxa_demangle(raw_name, out_name, &length, &status);
 
-    _sformat_val(buf, fmt, str(cxx_name, strlen(cxx_name)));
+    _sformat_val(buf, style, make_str(cxx_name));
 
-    if (cxx_buff != out_name) {
-        ::free(cxx_buff);
+    if (cxx_name != out_name) {
+        ::free(cxx_name);
     }
 #endif
 }

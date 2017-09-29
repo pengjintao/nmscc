@@ -5,6 +5,13 @@
 namespace nms
 {
 
+#pragma region predef: format
+struct FormatStyle;
+
+template<class Tview>
+inline void _sformat_view(IString& buf, const FormatStyle& style, const Tview& view);
+#pragma endregion
+
 template<typename T, u32 ...Ns>
 struct Vec;
 
@@ -25,6 +32,7 @@ struct Vec<T, N>
 {
     static constexpr auto $size  = N;
     static constexpr auto $count = N;
+
     T data[$size];
 
     template<typename I> __forceinline T&       operator[] (I idx)       noexcept { return data[idx]; }
@@ -42,16 +50,7 @@ struct Vec<T, N>
 #pragma region format
     template<typename Tbuff, typename Tstyle>
     void sformat(Tbuff& outbuf, const Tstyle& style) const {
-        outbuf += '[';
-
-        for (u32 i = 0u; i < $size; ++i) {
-            nms::sformat(outbuf, style, data[i]);
-            if (i + 1 != $count) {
-                outbuf += ", ";
-            }
-        }
-
-        outbuf += ']';
+        _sformat_view(outbuf, style, *this);
     }
 #pragma endregion
 };

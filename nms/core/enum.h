@@ -1,7 +1,16 @@
 #pragma once
 
+#include <nms/core/string.h>
+
 namespace nms
 {
+
+#pragma region format: pre-define
+struct FormatStyle;
+
+template<typename T>
+void _sformat_val(IString& outbuf, const FormatStyle& style, const T& value);
+#pragma endregion
 
 template<class T>
 struct Enum

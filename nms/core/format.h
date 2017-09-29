@@ -1,10 +1,10 @@
 #pragma once
 
-#include <nms/core/cpp.h>
 #include <nms/core/trait.h>
 #include <nms/core/string.h>
+#include <nms/core/enum.h>
+#include <nms/core/reflect.h>
 #include <nms/core/exception.h>
-
 
 namespace nms
 {
@@ -52,10 +52,10 @@ void _sformat_val(IString& buf, const FormatStyle& style, const char(&val)[N]) {
 }
 
 inline void _sformat_val(IString& buf, const FormatStyle& style, const char* val) {
-    _sformat_val(buf, style, str(val, strlen(val)));
+    _sformat_val(buf, style, make_str(val));
 }
 
-namespace ns_format
+namespace _ns_format
 {
 
 NMS_API bool next_value(IString& outbuf, str& strfmt, str& valfmt);
@@ -142,10 +142,78 @@ void match_index(IString& outbuf, const FormatStyle& style, i32 id, const T& t, 
 }
 
 }
-
 template<class T>
 void sformat(IString& outbuf, const FormatStyle& style, const T& value) {
-    ns_format::match_version(outbuf, style, value, Tver<9> {});
+    _ns_format::match_version(outbuf, style, value, Tver<9> {});
+}
+
+
+namespace _ns_format_view
+{
+
+template<class T>
+inline void match_rank(IString& outbuf, const FormatStyle& style, const T& view, Tu32<0>) {
+
+    const auto n = view.count;
+
+    outbuf += '[';
+    for (u32 i = 0u; i < n; ++i) {
+        sformat(outbuf, style, view[i]);
+        if (i + 1 != n) {
+            outbuf += ", ";
+        }
+    }
+    outbuf += ']';
+}
+
+inline void match_rank(IString& outbuf, const FormatStyle& style, const View<const char>& text, Tu32<0>) {
+    _sformat_val(outbuf, style, str{text.data, text.count});
+}
+
+inline void match_rank(IString& outbuf, const FormatStyle& style, const View<char>& text, Tu32<0>) {
+    _sformat_val(outbuf, style, str{text.data, text.count});
+}
+
+template<class T>
+inline void match_rank(IString& outbuf, const FormatStyle& style, const T& view, Tu32<1>) {
+    const auto linum_style = FormatStyle::fmt_uint_with_width('>', 3);
+
+    const auto nx = view.size[0];
+
+    outbuf += "\n";
+    for (u32 i = 0u; i < nx; ++i) {
+        _sformat_val(outbuf, linum_style, i);
+        outbuf += "| ";
+        sformat(outbuf, style, view[i]);
+        outbuf += "\n";
+    }
+}
+
+template<class T>
+inline void match_rank(IString& outbuf, const FormatStyle& style, const T& view, Tu32<2>) {
+    const auto linum_style = FormatStyle::fmt_uint_with_width('>', 3);
+
+    const auto nx = view.size[0];
+    const auto ny = view.size[1];
+
+    outbuf += "\n";
+    for (u32 i = 0u; i < nx; ++i) {
+        _sformat_val(outbuf, linum_style, i);
+        outbuf += "| ";
+        for (u32 j = 0u; j < ny; ++j) {
+            sformat(outbuf, style, view(i, j));
+            if (i + 1 != ny) {
+                outbuf += ", ";
+            }
+        }
+    }
+}
+
+}
+
+template<class Tview>
+inline void _sformat_view(IString& buf, const FormatStyle& style, const Tview& view) {
+    _ns_format_view::match_rank(buf, style, view, Tu32<Tview::$rank>{});
 }
 
 template<class ...Targs>
@@ -153,9 +221,9 @@ void sformat(IString& outbuf, str strfmt, const Targs& ...args) {
     auto argid  = i32(0);
     auto valfmt = str();
 
-    while (ns_format::next_value(outbuf, strfmt, valfmt)) {
+    while (_ns_format::next_value(outbuf, strfmt, valfmt)) {
         auto style = FormatStyle::from_fmt_str(valfmt);
-        ns_format::match_index(outbuf, style, argid, args...);
+        _ns_format::match_index(outbuf, style, argid, args...);
         ++argid;
     }
 }

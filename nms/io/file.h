@@ -35,7 +35,7 @@ class ENotEnough: public Exception
 struct IFile
 {
 #pragma region data
-    fid_t _thrd = nullptr;   // the FILE* object
+    fid_t _fobj = nullptr;   // the FILE* object
 #pragma endregion
 
 #pragma region property
@@ -52,7 +52,7 @@ struct IFile
     __declspec(property(get=get_size)) Tsize size;
 
     operator bool() const noexcept {
-        return _thrd != nullptr;
+        return _fobj != nullptr;
     }
 #pragma endregion
 
@@ -81,11 +81,11 @@ private:
 
 public:
     File() noexcept {
-        _thrd = nullptr;
+        this->_fobj = nullptr;
     }
 
     File(File&& rhs) noexcept : base(rhs) {
-        rhs._thrd = nullptr;
+        rhs._fobj = nullptr;
     }
 
     virtual ~File() {
@@ -135,11 +135,11 @@ private:
 
 public:
     TxtFile() noexcept {
-        _thrd = nullptr;
+        this->_fobj = nullptr;
     }
 
     TxtFile(TxtFile&& rhs) noexcept: base(rhs) {
-        rhs._thrd = nullptr;
+        rhs._fobj = nullptr;
     }
 
     virtual ~TxtFile() {

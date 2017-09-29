@@ -22,4 +22,8 @@ inline str make_str(const char* s) {
     return str(s, strlen(s));
 }
 
+inline str make_str(const char* s, u32 n) {
+    return str(s, n);
+}
+
 }

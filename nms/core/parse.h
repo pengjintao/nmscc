@@ -24,39 +24,39 @@ namespace ns_parse
 {
 
 template<class T>
-auto match_version(str text, str style, T& val, Tver<5>) -> decltype(T::parse(buf, fmt, val)) {
-    return T::parse(buf, fmt, val);
+auto match_version(str text, str style, T& value, Tver<5>) -> decltype(T::parse(text, style, value)) {
+    return T::parse(text, style, value);
 }
 
 template<class T>
-auto match_version(str text, str style, T& val, Tver<4>) -> decltype(T::parse(buf, val)) {
-    return T::parse(buf, val);
+auto match_version(str text, str /*style*/, T& value, Tver<4>) -> decltype(T::parse(text, value)) {
+    return T::parse(text, value);
 }
 
 template<class T>
-auto match_version(str text, str style, T& val, Tver<3>) -> decltype(_parse_num(text, style, val)) {
-    return _parse_num(text, style, val);
+auto match_version(str text, str style, T& value, Tver<3>) -> decltype(_parse_num(text, style, value)) {
+    return _parse_num(text, style, value);
 }
 
 template<class T>
-auto match_version(str text, str style, T& val, Tver<2>) -> decltype(_parse_str(text, style, val)) {
-    return _parse_str(text, style, val);
+auto match_version(str text, str style, T& value, Tver<2>) -> decltype(_parse_str(text, style, value)) {
+    return _parse_str(text, style, value);
 }
 
 template<class T>
-auto match_version(str text, str style, T& val, Tver<1>) -> decltype(Enum<T>(val), true) {
-    return Enum<T>::parse(text, style, val);
+auto match_version(str text, str style, T& value, Tver<1>) -> decltype(Enum<T>(value), true) {
+    return Enum<T>::parse(text, style, value);
 }
 
 }
 
 template<class T>
-bool str_cast(str text, T& val) {
-    return ns_parse::match_version(text, {}, val, Tver<9>{});
+bool str_cast(str text, T& value) {
+    return ns_parse::match_version(text, {}, value, Tver<9>{});
 }
 
 template<class T, class ...U>
-void parse(str text, str fmt, T& arg, U& ... args) {
+void parse(str text, str format, T& arg, U& ... args) {
 }
 
 
